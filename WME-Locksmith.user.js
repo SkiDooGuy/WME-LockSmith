@@ -18,6 +18,10 @@
 /* global _ */
 /* global require */
 
+
+// Began process of making useable to multiple countries
+// Need to update how spreadsheet is pulled, use of terms like "state"
+
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - <br><br>
@@ -29,6 +33,7 @@ let _currentStateStandards = {};
 let LsSettings = {};
 let _currentState = '';
 let _editorRank;
+let _editorInfo;
 let LocksmithHighlightLayer;
 let tries = 0;
 let UpdateObj;
@@ -83,9 +88,10 @@ const css = [
 function Locksmithbootstrap() {
     if (W && W.map && W.model && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
         initLocksmith();
-    } else if (tries < 500) setTimeout(() => { tries++;
-        Locksmithbootstrap(); }, 200);
-    else console.log('Failed to load Locksmith');
+    } else if (tries < 500) {
+        setTimeout(() => { tries++;
+            Locksmithbootstrap(); }, 200);
+    } else console.log('Failed to load Locksmith');
 }
 
 function initLocksmith() {
@@ -94,7 +100,7 @@ function initLocksmith() {
         return console.log('WME is not in editing mode');
     }
 
-    editorInfo = W.loginManager.user;
+    _editorInfo = W.loginManager.user;
 
     const $section = $('<div>');
     // HTML for UI tab
@@ -518,14 +524,14 @@ function initLocksmith() {
     ].join(' '));
     // Attach HTML for tab to webpage
     UpdateObj = require('Waze/Action/UpdateObject');
-    let safeProceed = editorInfo.id != 461031220;
+    let safeProceed = _editorInfo.id != 461031220;
     // Gather info about editor rank
 
-    _editorRank = editorInfo.rank;
+    _editorRank = _editorInfo.rank;
 
     // Script is initialized and the highlighting layer is created
     if (_editorRank >= 2 && safeProceed) {
-        new WazeWrap.Interface.Tab('LsUS', $section.html(), initializeSettings);
+        new WazeWrap.Interface.Tab('LS', $section.html(), initializeSettings);
 
         WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith-us', 'https://www.waze.com/forum/viewtopic.php?f=1286&t=285583');
 
@@ -535,7 +541,7 @@ function initLocksmith() {
 
         setTimeout(() => { if (_editorRank < 4) WazeWrap.Alerts.warning(GM_info.script.name, `Editor rank below R5, the maximum you'll be able to lock segments is R${_editorRank + 1}`); }, 3000);
         console.log('Locksmith loaded');
-    } else return console.log('Locksmith: insufficient permissions...');
+    } else return console.log('Locksmith: Error Loading...');
 }
 
 async function initializeSettings() {
@@ -564,12 +570,16 @@ async function initializeSettings() {
         getCurrentState();
         setCurrentStandards(_currentState);
     });
-    $('#ls-Othr-Seg-Label').click(() => { $('#ls-Seg-Types-Main').toggle();
+    $('#ls-Othr-Seg-Label').click(() => {
+        $('#ls-Seg-Types-Main').toggle();
         $('#ls-Seg-Types-Alt').toggle();
-        $('#rl-Othr-Result-Container').toggle(); });
+        $('#rl-Othr-Result-Container').toggle();
+    });
 
-    $('#ls-State-Selection').change(function() { _currentState = this.value;
-        setCurrentStandards(_currentState); });
+    $('#ls-State-Selection').change(function() {
+        _currentState = this.value;
+        setCurrentStandards(_currentState);
+    });
     $('#lsEnableHighlightSeg').change(function() { if (!this.checked) { removeHighlights(); } });
     $("input[type='checkbox'].ls-Att-Ck-Form").change(function() {
         const elementName = $(this).attr('id');
