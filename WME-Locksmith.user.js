@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.07.28.01
+// @version      2020.09.21.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -22,7 +22,7 @@ const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - <br><br>
 <b>FIXES:</b><br>
-- Updated OpenLayers object name to prevent console warnings<br><br>`;
+- Fixed issue with segment state<br><br>`;
 
 let _allStandardsArray = {};
 let _currentStateStandards = {};
@@ -1145,7 +1145,8 @@ function processSegment(seg) {
     const wktChkd = getId('ls-WKT-Enable').checked;
     // const hovChkd = getId('ls-HOV-Enable').checked;
 
-    if (seg.state !== 'Insert' && seg.state !== 'Delete') {
+    let segStatus = seg.state == null ? 'good' : seg.state;
+    if (segStatus.toLowerCase() !== 'insert' && segStatus.toLowerCase() !== 'delete') {
         // Gather/verify info attached to segment
         const priSt = W.model.streets.getObjectById(segAtt.primaryStreetID);
         const cityObj = W.model.cities.getObjectById(priSt.cityID);
