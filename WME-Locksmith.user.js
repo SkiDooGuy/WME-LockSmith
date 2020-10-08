@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.09.21.01
+// @version      2020.10.8.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -22,7 +22,7 @@ const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - <br><br>
 <b>FIXES:</b><br>
-- Fixed issue with segment state<br><br>`;
+- Segments with tolls that don't use the main toll setting will now be accounted for<br><br>`;
 
 let _allStandardsArray = {};
 let _currentStateStandards = {};
@@ -33,7 +33,7 @@ let LocksmithHighlightLayer;
 let tries = 0;
 let UpdateObj;
 
-console.log('Locksmith initializing...');
+console.log('Locksmith (LS) initializing...');
 
 const css = [
     '.ls-Wrapper {width:100%;height:100%;background-color:white;border:2px solid white;border-radius:6px;font-size:12px;font-family:Poppins, "Helvetica Neue", Helvetica, "Open Sans", sans-serif;user-select:none;}',
@@ -85,13 +85,13 @@ function Locksmithbootstrap() {
         initLocksmith();
     } else if (tries < 500) setTimeout(() => { tries++;
         Locksmithbootstrap(); }, 200);
-    else console.log('Failed to load Locksmith');
+    else console.log('LS: Failed to load');
 }
 
 function initLocksmith() {
     // Checks to ensure WME is in editing mode and not HN or Event mode
     if (W.app.modeController.model.attributes.mode !== 0 && !W.editingMediator.attributes.editingHouseNumbers) {
-        return console.log('WME is not in editing mode');
+        return console.log('LS: WME is not in editing mode');
     }
 
     editorInfo = W.loginManager.user;
@@ -534,8 +534,8 @@ function initLocksmith() {
         LocksmithHighlightLayer.setVisibility(true);
 
         setTimeout(() => { if (_editorRank < 4) WazeWrap.Alerts.warning(GM_info.script.name, `Editor rank below R5, the maximum you'll be able to lock segments is R${_editorRank + 1}`); }, 3000);
-        console.log('Locksmith loaded');
-    } else return console.log('Locksmith: insufficient permissions...');
+        console.log('LS: loaded');
+    } else return console.log('LS: insufficient permissions...');
 }
 
 async function initializeSettings() {
@@ -1049,8 +1049,14 @@ function processLocks(seg, currLockRnk, stdLockRnk) {
 
 function getSegmentConditions(seg, conditions) {
     // Determine segment attributes for locking exceptions
+    const restrictions = seg.restrictions;
     if ((seg.fwdDirection === false && seg.revDirection === true) || (seg.fwdDirection === true && seg.revDirection === false)) conditions.isOneWay = true;
     if (seg.fwdToll === true || seg.revToll === true) conditions.isTollRoad = true;
+    if (restrictions.length > 0) {
+        for (let i = 0; i < restrictions.length; i++) {
+            if (restrictions[i]._defaultType === 'TOLL') conditions.isTollRoad = true;
+        }
+    }
     if (seg.flags === 16) conditions.isUnpaved = true;
     return conditions;
 }
