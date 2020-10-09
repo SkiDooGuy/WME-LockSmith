@@ -525,7 +525,7 @@ function initLocksmith() {
 
     // Script is initialized and the highlighting layer is created
     if (_editorRank >= 2 && safeProceed) {
-        new WazeWrap.Interface.Tab('LsUS', $section.html(), initializeSettings);
+        new WazeWrap.Interface.Tab('LS', $section.html(), initializeSettings);
 
         WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith-us', 'https://www.waze.com/forum/viewtopic.php?f=1286&t=285583');
 
