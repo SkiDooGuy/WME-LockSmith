@@ -32,6 +32,7 @@ let _editorRank;
 let LocksmithHighlightLayer;
 let tries = 0;
 let UpdateObj;
+let country;
 
 console.log('Locksmith (LS) initializing...');
 
@@ -81,8 +82,15 @@ const css = [
 ].join(' ');
 
 function Locksmithbootstrap() {
-    if (W && W.map && W.model && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
-        initLocksmith();
+    if (W && W.map && W.model && W.model.countries && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
+        checkCountry();
+        if (country === null) {
+            setTimeout( function() {
+                Locksmithbootstrap();
+            }, 200);
+        } else {
+            initLocksmith();
+        }
     } else if (tries < 500) setTimeout(() => { tries++;
         Locksmithbootstrap(); }, 200);
     else console.log('LS: Failed to load');
@@ -542,7 +550,6 @@ async function initializeSettings() {
     loadSpreadsheet();
     await loadSettings();
     setUserOptions();
-    getCurrentState();
 
     $(`<style type="text/css">${css}</style>`).appendTo('head');
 
@@ -830,9 +837,24 @@ function WKT_to_LinearRing(wkt) {
 }
 
 async function loadSpreadsheet() {
+    let sheetCode;
+    let sheetRange;
     let connectionEstablished = false;
-    const apiKey = 'AIzaSyDZjmkSx5xWc-86hsAIzedgDgRgy8vB7BQ';
-    const rawSheetData = await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/1DJEk390OYv5jWXEINl6PF3I1A8y1WrwrdPIsAL7SihI/values/Sheet1!A2:C?key=${apiKey}`);
+    const apiKey = 'AIzaSyB8ilOS8JuGaPSLtX3XJRDDpJtyII7aE7g';
+    if (country !== 235) {
+        sheetCode = '1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho';
+        switch(country) {
+            case 40:
+                    sheetRange = '';
+                    break;
+            default:
+                WazeWrap.Alerts.warning(GM_info.script.name, `No locking standards for country ID ${country}. Please contact SkiDooGuy to have it included.`);
+        };
+    } else {
+        sheetCode = '1DJEk390OYv5jWXEINl6PF3I1A8y1WrwrdPIsAL7SihI';
+        sheetRange = 'Sheet1!A2:C';
+    }
+    const rawSheetData = await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${sheetCode}/values/${sheetRange}?key=${apiKey}`);
     if (rawSheetData.values.length > 0) {
         _.each(rawSheetData.values, v => {
             if (!_allStandardsArray[v[1]]) _allStandardsArray[v[1]] = JSON.parse(v[0]);
@@ -890,6 +912,8 @@ async function loadSpreadsheet() {
             });
         }
     });
+
+    getCurrentState();
 }
 
 function getCurrentState() {
@@ -921,6 +945,18 @@ function getCurrentState() {
     }
     stateModelStatus();
     return statusOk;
+}
+
+function checkCountry() {
+    try {
+        country = W.model.getTopCountry().id;
+    }
+    catch(err) {
+        country = null;
+        // console.log(err);
+    }
+
+
 }
 
 function generateStateList() {
