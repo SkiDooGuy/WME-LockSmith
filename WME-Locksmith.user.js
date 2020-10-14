@@ -20,6 +20,7 @@
 /* global _allStandardsArray */
 
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
+const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - Now accounts for country when getting lock standards<br>
 - Translations ready<br>
@@ -27,49 +28,49 @@ const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 <b>FIXES:</b><br>
 -<br><br>`;
 const TRANSLATIONS = {
-    'default': {
-        'scriptTitle': 'Locksmith',
-        'sheetTooltip': 'Spreadsheet Connection',
-        'rankTooltip': 'Allows segments that you cannot edit or lock to the standard rank to be highlighted and show in the UI',
-        'highLockTooltip': 'Watch out for map exceptions, some higher locks are there for a reason!',
-        'resetTooltip': 'Reset lock values and UI',
-        'attrTooltip': 'Colored attributes are available in this state, click to toggle them enabled',
-        'resetValue': 'Reset',
-        'scanValue': 'Scan',
-        'lockAllValue': 'Lock All',
-        'optionsMenu': 'Options',
-        'activeScan': 'Active Scan',
-        'enHighlights': 'Enable Highlights',
-        'detAbvRank': 'Detect segs above my rank',
-        'saveCustLock': 'Save custom locks',
-        'saveScnSet': 'Save scan settings',
-        'manStateSel': 'Manual state select',
-        'disStatePop': 'Disable states popup',
-        'ovrLockSegs': 'Include overlocked segs',
-        'lockStand': 'Lock Standards  ',
-        'lockStat': 'Lock Status: Low | High | All',
-        'othrSegTypes': 'Other segment types: ',
-        'addAttr': 'Additional Attributes',
-        'roadNonPed': 'NonRout Ped',
-        'roadRun': 'Runway',
-        'roadFry': 'Ferry',
-        'roadRail': 'Railroad',
-        'roadOff': 'Off-Road',
-        'roadPLR': 'PLR',
-        'roadPVT': 'PVT',
-        'roadLS': 'LS',
-        'roadPS': 'PS',
-        'roadMinH': 'mH',
-        'roadMajH': 'MH',
-        'roadRmp': 'Ramp',
-        'roadFwy': 'Fwy',
-        'unpaved': 'Unpaved',
-        'oneWay': 'One-way',
-        'hov': 'HOV',
-        'wkt': 'WKT',
-        'toll': 'Toll',
-        'option0': 'Auto',
-        'optionHRCS': 'HRCS'
+    default: {
+        scriptTitle: 'Locksmith',
+        sheetTooltip: 'Spreadsheet Connection',
+        rankTooltip: 'Allows segments that you cannot edit or lock to the standard rank to be highlighted and show in the UI',
+        highLockTooltip: 'Watch out for map exceptions, some higher locks are there for a reason!',
+        resetTooltip: 'Reset lock values and UI',
+        attrTooltip: 'Colored attributes are available in this state, click to toggle them enabled',
+        resetValue: 'Reset',
+        scanValue: 'Scan',
+        lockAllValue: 'Lock All',
+        optionsMenu: 'Options',
+        activeScan: 'Active Scan',
+        enHighlights: 'Enable Highlights',
+        detAbvRank: 'Detect segs above my rank',
+        saveCustLock: 'Save custom locks',
+        saveScnSet: 'Save scan settings',
+        manStateSel: 'Manual state select',
+        disStatePop: 'Disable states popup',
+        ovrLockSegs: 'Include overlocked segs',
+        lockStand: 'Lock Standards  ',
+        lockStat: 'Lock Status: Low | High | All',
+        othrSegTypes: 'Other segment types: ',
+        addAttr: 'Additional Attributes',
+        roadNonPed: 'NonRout Ped',
+        roadRun: 'Runway',
+        roadFry: 'Ferry',
+        roadRail: 'Railroad',
+        roadOff: 'Off-Road',
+        roadPLR: 'PLR',
+        roadPVT: 'PVT',
+        roadLS: 'LS',
+        roadPS: 'PS',
+        roadMinH: 'mH',
+        roadMajH: 'MH',
+        roadRmp: 'Ramp',
+        roadFwy: 'Fwy',
+        unpaved: 'Unpaved',
+        oneWay: 'One-way',
+        hov: 'HOV',
+        wkt: 'WKT',
+        toll: 'Toll',
+        option0: 'Auto',
+        optionHRCS: 'HRCS'
     }
 
 };
@@ -83,9 +84,10 @@ let roadClear = false;
 let LocksmithHighlightLayer;
 let tries = 0;
 let UpdateObj;
+let editorInfo;
 let country;
 let langLocality = 'default';
-let featureLock = 2;
+
 
 console.log('Locksmith(LS): initializing...');
 
@@ -138,15 +140,18 @@ function Locksmithbootstrap() {
     if (W && W.map && W.model && W.model.countries && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
         checkCountry();
         if (country === null) {
-            setTimeout( function() {
+            setTimeout(function () {
                 Locksmithbootstrap();
             }, 200);
         } else {
             initLocksmith();
         }
-    } else if (tries < 500) setTimeout(() => { tries++;
-        Locksmithbootstrap(); }, 200);
-    else console.log('LS: Failed to load');
+    } else if (tries < 500) {
+        setTimeout(() => {
+            tries++;
+            Locksmithbootstrap();
+        }, 200);
+    } else console.log('LS: Failed to load');
 }
 
 function initLocksmith() {
@@ -580,7 +585,7 @@ function initLocksmith() {
     // Attach HTML for tab to webpage
     UpdateObj = require('Waze/Action/UpdateObject');
     cakeFlavor = editorInfo.rank;
-    roadClear = cakeFlavor >= featureLock;
+    roadClear = cakeFlavor >= FEATURELOCK;
 
     // Script is initialized and the highlighting layer is created
     new WazeWrap.Interface.Tab('LS', $section.html(), initializeSettings);
@@ -591,7 +596,11 @@ function initLocksmith() {
     W.map.addLayer(LocksmithHighlightLayer);
     LocksmithHighlightLayer.setVisibility(true);
 
-    setTimeout(() => { if (cakeFlavor < 4) WazeWrap.Alerts.warning(GM_info.script.name, `Editor rank below R5, the maximum you'll be able to lock segments is R${cakeFlavor + 1}`); }, 3000);
+    setTimeout(() => {
+        if (cakeFlavor < 4) {
+            WazeWrap.Alerts.warning(GM_info.script.name, `Editor rank below R5, the maximum you'll be able to lock segments is R${cakeFlavor + 1}`);
+        }
+    }, 3000);
     console.log('LS: loaded');
 }
 
@@ -627,14 +636,18 @@ async function initializeSettings() {
         getCurrentState();
         setCurrentStandards(_currentState);
     });
-    $('#ls-Othr-Seg-Label').click(() => { $('#ls-Seg-Types-Main').toggle();
+    $('#ls-Othr-Seg-Label').click(() => {
+        $('#ls-Seg-Types-Main').toggle();
         $('#ls-Seg-Types-Alt').toggle();
-        $('#rl-Othr-Result-Container').toggle(); });
+        $('#rl-Othr-Result-Container').toggle();
+    });
 
-    $('#ls-State-Selection').change(function() { _currentState = this.value;
-        setCurrentStandards(_currentState); });
-    $('#lsEnableHighlightSeg').change(function() { if (!this.checked) { removeHighlights(); } });
-    $("input[type='checkbox'].ls-Att-Ck-Form").change(function() {
+    $('#ls-State-Selection').change(function () {
+        _currentState = this.value;
+        setCurrentStandards(_currentState);
+    });
+    $('#lsEnableHighlightSeg').change(function () { if (!this.checked) { removeHighlights(); } });
+    $("input[type='checkbox'].ls-Att-Ck-Form").change(function () {
         const elementName = $(this).attr('id');
 
         switch (elementName) {
@@ -662,7 +675,7 @@ async function initializeSettings() {
                 console.log('LS: Seg Att switch error');
         }
     });
-    $('#lsManualStateOverride').change(function() {
+    $('#lsManualStateOverride').change(function () {
         if (this.checked) {
             generateStateList();
             $('#ls-State-Select-Container').css('display', 'inline-block');
@@ -675,17 +688,21 @@ async function initializeSettings() {
             getCurrentState();
         }
     });
-    $('#lsEnableActiveScan').change(function() { if (!this.checked) { resetUISegStats();
-            removeHighlights(); } });
+    $('#lsEnableActiveScan').change(function () {
+        if (!this.checked) {
+            resetUISegStats();
+            removeHighlights();
+        }
+    });
 
     // Trigger checkbox save status
-    $('.ls-Save-Status').change(function() {
+    $('.ls-Save-Status').change(function () {
         let settingName = $(this)[0].id.substr(2);
         LsSettings[settingName] = this.checked;
         saveSettings();
     });
     // Trigger save upon select change
-    $('.ls-Select').change(function() {
+    $('.ls-Select').change(function () {
         let settingName = $(this)[0].id.substr(2);
         LsSettings[settingName] = this.value;
         saveSettings();
@@ -1067,13 +1084,10 @@ function getCurrentState() {
 function checkCountry() {
     try {
         country = W.model.getTopCountry().name;
-    }
-    catch(err) {
+    } catch (err) {
         country = null;
         // console.log(err);
     }
-
-
 }
 
 function generateStateList() {
@@ -1134,7 +1148,8 @@ function setCurrentStandards(stateName) {
                 $('#ls-Unpaved-Enable').attr('disabled', true);
                 $('#ls-Unpaved-Status').css({ 'background-image': 'repeating-linear-gradient(135deg,lightgrey,grey 10px,black 4px)', 'background-color': '' });
             }
-            if (_currentStateStandards.LS1Way || _currentStateStandards.PS1Way || _currentStateStandards.mH1Way || _currentStateStandards.MH1Way || _currentStateStandards.Private1Way) {
+            if (_currentStateStandards.LS1Way || _currentStateStandards.PS1Way || _currentStateStandards.mH1Way
+                || _currentStateStandards.MH1Way || _currentStateStandards.Private1Way) {
                 $('#ls-OneWay-Enable').attr('disabled', false);
                 $('#ls-OneWay-Enable').prop('checked', true);
                 $('#ls-OneWay-Status').css({ 'background-color': 'rgb(236,249,31)', 'background-image': '' });
