@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WME Locksmith
+// @name         WME-Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.10.8.01
+// @version      2020.10.13.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -17,14 +17,64 @@
 /* global OpenLayers */
 /* global _ */
 /* global require */
+/* global _allStandardsArray */
 
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
-- <br><br>
+- Now accounts for country when getting lock standards<br>
+- Translations ready<br>
+- Safety locks in place for rank based features<br><br>
 <b>FIXES:</b><br>
-- Segments with tolls that don't use the main toll setting will now be accounted for<br><br>`;
+-<br><br>`;
+const TRANSLATIONS = {
+    'default': {
+        'scriptTitle': 'Locksmith',
+        'sheetTooltip': 'Spreadsheet Connection',
+        'rankTooltip': 'Allows segments that you cannot edit or lock to the standard rank to be highlighted and show in the UI',
+        'highLockTooltip': 'Watch out for map exceptions, some higher locks are there for a reason!',
+        'resetTooltip': 'Reset lock values and UI',
+        'attrTooltip': 'Colored attributes are available in this state, click to toggle them enabled',
+        'resetValue': 'Reset',
+        'scanValue': 'Scan',
+        'lockAllValue': 'Lock All',
+        'optionsMenu': 'Options',
+        'activeScan': 'Active Scan',
+        'enHighlights': 'Enable Highlights',
+        'detAbvRank': 'Detect segs above my rank',
+        'saveCustLock': 'Save custom locks',
+        'saveScnSet': 'Save scan settings',
+        'manStateSel': 'Manual state select',
+        'disStatePop': 'Disable states popup',
+        'ovrLockSegs': 'Include overlocked segs',
+        'lockStand': 'Lock Standards  ',
+        'lockStat': 'Lock Status: Low | High | All',
+        'othrSegTypes': 'Other segment types: ',
+        'addAttr': 'Additional Attributes',
+        'roadNonPed': 'NonRout Ped',
+        'roadRun': 'Runway',
+        'roadFry': 'Ferry',
+        'roadRail': 'Railroad',
+        'roadOff': 'Off-Road',
+        'roadPLR': 'PLR',
+        'roadPVT': 'PVT',
+        'roadLS': 'LS',
+        'roadPS': 'PS',
+        'roadMinH': 'mH',
+        'roadMajH': 'MH',
+        'roadRmp': 'Ramp',
+        'roadFwy': 'Fwy',
+        'unpaved': 'Unpaved',
+        'oneWay': 'One-way',
+        'hov': 'HOV',
+        'wkt': 'WKT',
+        'toll': 'Toll',
+        'option0': 'Auto',
+        'optionHRCS': 'HRCS'
+    }
 
-let _allStandardsArray = {};
+};
+
+_allStandardsArray = {};
 let _currentStateStandards = {};
 let LsSettings = {};
 let _currentState = '';
@@ -33,6 +83,7 @@ let LocksmithHighlightLayer;
 let tries = 0;
 let UpdateObj;
 let country;
+let langLocality = 'default';
 
 console.log('Locksmith (LS) initializing...');
 
@@ -111,45 +162,45 @@ function initLocksmith() {
         '<div class="ls-Body">',
         `<div class="ls-Header-Wrapper">
                     <div class="ls-Header-Text-Container">
-                        <span class='key-Text'>Locksmith US</span> - <span id='lsVersion' /><a href='https://docs.google.com/spreadsheets/d/1DJEk390OYv5jWXEINl6PF3I1A8y1WrwrdPIsAL7SihI/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title="Spreadsheet Connection" />
+                        <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}<a href='https://docs.google.com/spreadsheets/d/1DJEk390OYv5jWXEINl6PF3I1A8y1WrwrdPIsAL7SihI/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}' />
                     </div>
                     <div class="ls-Options-Container" style="display:block;height:35px;padding:2px 10px 0 10px;width:100%">
                         <div style="display:inline-block;float:left;position:relative;width:60%;">
                             <div class="ls-Options-Container" style="margin:3px 0 0 0;">
                                 <div class="ls-Options-Menu">
-                                    <div>Options</div>
+                                    <div><span id='ls-text-options' /></div>
                                     <div class="ls-Options-Dropdown-Menu">
                                         <ul>
                                             <li>
-                                                <label class="ls-Label">Active Scan<input type="checkbox" class="ls-Save-Status" id="lsEnableActiveScan">
+                                                <label class="ls-Label"><span id='ls-text-activeScan' /><input type="checkbox" class="ls-Save-Status" id="lsEnableActiveScan">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label">Enable Highlights<input type="checkbox" class="ls-Save-Status" id="lsEnableHighlightSeg">
+                                                <label class="ls-Label"><span id='ls-text-enHighlights' /><input type="checkbox" class="ls-Save-Status" id="lsEnableHighlightSeg">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
-                                            <li id="ls-Above-Rank-Tooltip" data-original-title="Allows segments that you cannot edit or lock to the standard rank to be highlighted and show in the UI">
-                                                <label class="ls-Label">Detect Segs Above My Rank<input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
-                                                <span class="ls-CheckBox" /></label>
-                                            </li>
-                                            <li>
-                                                <label class="ls-Label">Save Custom Locks<input type="checkbox" class="ls-Save-Status" id="lsEnableSaveValues">
+                                            <li id="ls-Above-Rank-Tooltip" data-original-title='${TRANSLATIONS[langLocality].rankTooltip}'>
+                                                <label class="ls-Label"><span id='ls-text-detAbvRank' /><input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label">Save Scan Settings<input type="checkbox" class="ls-Save-Status" id="lsEnableSaveSettings">
+                                                <label class="ls-Label"><span id='ls-text-saveCustLock' /><input type="checkbox" class="ls-Save-Status" id="lsEnableSaveValues">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label" style="margin:0px;">Manual State Select<input type="checkbox" id="lsManualStateOverride">
+                                                <label class="ls-Label"><span id='ls-text-saveScnSet' /><input type="checkbox" class="ls-Save-Status" id="lsEnableSaveSettings">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label">Disable states popup<input type="checkbox" class="ls-Save-Status" id="lsDisableStatePopup">
+                                                <label class="ls-Label" style="margin:0px;"><span id='ls-text-manStateSel' /><input type="checkbox" id="lsManualStateOverride">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
-                                            <li id="ls-Higher-Level-Tooltip" data-original-title="Watch out for map exceptions, some higher locks are there for a reason!">
-                                                <label class="ls-Label" style="font-weight:bold;">Include Overlocked Segs<input type="checkbox" class="ls-Save-Status" id="lsEnableResetHigher">
+                                            <li>
+                                                <label class="ls-Label"><span id='ls-text-disStatePop' /><input type="checkbox" class="ls-Save-Status" id="lsDisableStatePopup">
+                                                <span class="ls-CheckBox" /></label>
+                                            </li>
+                                            <li id="ls-Higher-Level-Tooltip" data-original-title='${TRANSLATIONS[langLocality].highLockTooltip}'>
+                                                <label class="ls-Label" style="font-weight:bold;"><span id='ls-text-ovrLockSegs' /><input type="checkbox" class="ls-Save-Status" id="lsEnableResetHigher">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
                                         </ul>
@@ -157,26 +208,26 @@ function initLocksmith() {
                                 </div>
                             </div>
                             <div class="ls-Button-Container" style="width:50%;left:-20px">
-                                <input type="button" class="ls-Button" id="ls-Reset-Standards-Display" style="position:relative;" value="Reset" data-original-title="Reset lock values and UI">
+                                <input type="button" class="ls-Button" id="ls-Reset-Standards-Display" style="position:relative;" value='${TRANSLATIONS[langLocality].resetValue}' data-original-title='${TRANSLATIONS[langLocality].resetTooltip}'>
                             </div>
                         </div>
                         <div class="ls-Button-Container">
-                            <input type="button" class="ls-Button" style="position:relative;left:5px;" id="ls-Maual-Scan-Activate" value="Scan">
-                            <input type="button" class="ls-Button" style="float:right;" id="ls-Lock-All-Submit" value="Lock All">
+                            <input type="button" class="ls-Button" style="position:relative;left:5px;" id="ls-Maual-Scan-Activate" value='${TRANSLATIONS[langLocality].scanValue}'>
+                            <input type="button" class="ls-Button" style="float:right;" id="ls-Lock-All-Submit" value='${TRANSLATIONS[langLocality].lockAllValue}'>
                         </div>
                     </div>
                 </div>
                 <div class="ls-Section-Container" style="margin-top:0px;">
                     <div class="ls-Section-Container">
-                        <span style="float:left;border-bottom:1px solid black;">Lock Standards&nbsp;&nbsp;</span>
-                        <span style="float:right;border-bottom:1px solid black;">Lock Status:&nbsp;Low&nbsp;&nbsp;|&nbsp;&nbsp;High&nbsp;&nbsp;|&nbsp;All</span>
+                        <span style="float:left;border-bottom:1px solid black;" id='ls-text-lockStand' />
+                        <span style="float:right;border-bottom:1px solid black;" id='ls-text-lockStat' />
                     </div>
 
                     <div class="ls-Section-Container">
                         <div class="ls-Section-Container" id="ls-Seg-Types-Main">
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockStreetSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -199,7 +250,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockPSSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -222,7 +273,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockMinHSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -245,7 +296,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockMajHSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -268,7 +319,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockRmpSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-0">HRCS</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-HRCS">${TRANSLATIONS[langLocality].optionHRCS}</option>
                                     <option class="ls-Lock-Option-1">1</option><option class="ls-Lock-Option-2">2</option>
                                     <option class="ls-Lock-Option-3">3</option><option class="ls-Lock-Option-4">4</option>
                                     <option class="ls-Lock-Option-5">5</option><option class="ls-Lock-Option-6">6</option>
@@ -291,7 +342,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockFwySelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -314,7 +365,7 @@ function initLocksmith() {
                         </div>
 
                         <div class="ls-Lock-Options">
-                            <div style="display:inline-block;float:left;cursor:pointer;" id="ls-Othr-Seg-Label">Other segment types: </div>
+                            <div style="display:inline-block;float:left;cursor:pointer;" id="ls-Othr-Seg-Label"><span id='ls-text-othrSegTypes' /></div>
                             <div class="ls-Seg-Result" style="top:5px;" id="rl-Othr-Result-Container">
                                 <div class="ls-IL-Block">
                                     <span class="fa fa-arrow-circle-up" id="ls-othr-Lock-Up" />
@@ -331,7 +382,7 @@ function initLocksmith() {
                         <div class="ls-Section-Container" id="ls-Seg-Types-Alt" style="display:none;">
                             <div class="ls-Lock-Options" style="margin-top:3px;">
                                 <select class="ls-Select" id="lsLockPvtSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -354,7 +405,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockPlrSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -377,7 +428,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockRailSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -400,7 +451,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockFrySelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -423,7 +474,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockRnwySelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -446,7 +497,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockOfrdSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -469,7 +520,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockNonpedSelect">
-                                    <option class="ls-Lock-Option-0">Auto</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -502,7 +553,7 @@ function initLocksmith() {
                     </div>
                 </div>
                 <div class="ls-Section-Container">
-                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title="Colored attributes are available in this state, click to toggle them enabled">Additional Attributes</div>
+                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS[langLocality].highLockTooltip}'><span id='ls-text-addAttr' /></div>
                     <div class="ls-Locking-Attributes">
                         <label class="ls-Attr-Label">
                             <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Unpaved-Enable"><span class="ls-Attr-CheckBox" id="ls-Unpaved-Status" />
@@ -642,33 +693,6 @@ async function initializeSettings() {
     W.model.actionManager.events.register('afterundoaction', null, tryScan);
     W.model.actionManager.events.register('afterclearactions', null, tryScan);
     W.model.actionManager.events.register('afterclearactions', null, resetUISegStats);
-
-    // Setup UI text
-    $('#lsVersion').text(LOCKSMITH_VERSION);
-    $('.ls-FWY-Label').text('FWY');
-    $('.ls-Ramp-Label').text('Ramp');
-    $('.ls-majH-Label').text('MH');
-    $('.ls-minH-Label').text('mH');
-    $('.ls-PS-Label').text('PS');
-    $('.ls-LS-Label').text('LS');
-    $('.ls-Pvt-Label').text('PVT');
-    $('.ls-Plr-Label').text('PLR');
-    $('.ls-Rail-Label').text('Railroad');
-    $('.ls-Fry-Label').text('Ferry');
-    $('.ls-Ofrd-Label').text('Off-Road');
-    $('.ls-Rnwy-Label').text('Runway');
-    $('.ls-Nonped-Label').text('NonRout Ped');
-    $('.ls-Seg-Quantity-Low').text('--');
-    $('.ls-Seg-Quantity-High').text('--');
-    $('.fa.fa-arrow-circle-up').css({ color: 'lightgrey', cursor: 'default' });
-    $('.fa.fa-arrow-circle-down').css({ color: 'lightgrey', cursor: 'default' });
-    $('.fa.fa-arrow-circle-up').attr('disabled', true);
-    $('.fa.fa-arrow-circle-down').attr('disabled', true);
-    $('#ls-Unpaved-Status').text('Unpaved');
-    $('#ls-OneWay-Status').text('One-Way');
-    $('#ls-HOV-Status').text('HOV');
-    $('#ls-WKT-Status').text('WKT');
-    $('#ls-Toll-Status').text('Toll');
 
     function setUserOptions() {
         // Checks editors rank and hides lock options above them
@@ -837,35 +861,62 @@ function WKT_to_LinearRing(wkt) {
 }
 
 async function loadSpreadsheet() {
-    let sheetCode;
-    let sheetRange;
     let connectionEstablished = false;
+    const sheetCode = '1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho';
     const apiKey = 'AIzaSyB8ilOS8JuGaPSLtX3XJRDDpJtyII7aE7g';
-    if (country !== 235) {
-        sheetCode = '1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho';
-        switch(country) {
-            case 40:
-                    sheetRange = '';
-                    break;
-            default:
-                WazeWrap.Alerts.warning(GM_info.script.name, `No locking standards for country ID ${country}. Please contact SkiDooGuy to have it included.`);
-        };
-    } else {
-        sheetCode = '1DJEk390OYv5jWXEINl6PF3I1A8y1WrwrdPIsAL7SihI';
-        sheetRange = 'Sheet1!A2:C';
+    const standardsFailFunc = (jqXHR, textStatus, errorThrown) => {
+        console.error('LS: Error loading settings:', errorThrown);
+    };
+    const translationsFailFunc = (jqXHR, textStatus, errorThrown) => {
+        console.error('LS: Error loading trans:', errorThrown);
+    };
+
+    try {
+        await $.getJSON(
+            `https://sheets.googleapis.com/v4/spreadsheets/${sheetCode}/values/Translations!A2:C?key=${apiKey}`
+        )
+            .done(async (transArray) => {
+                if (transArray.values.length > 0) {
+                    _.each(transArray.values, t => {
+                        if (!TRANSLATIONS[t[1]] && Number.parseInt(t[2], 10) === 1) {
+                            TRANSLATIONS[t[1]] = JSON.parse(t[0]);
+                        }
+                    });
+                } else {
+                    translationsFailFunc();
+                }
+            })
+            .fail(translationsFailFunc);
+    } catch (e) {
+        translationsFailFunc(null, null, e);
     }
-    const rawSheetData = await $.getJSON(`https://sheets.googleapis.com/v4/spreadsheets/${sheetCode}/values/${sheetRange}?key=${apiKey}`);
-    if (rawSheetData.values.length > 0) {
-        _.each(rawSheetData.values, v => {
-            if (!_allStandardsArray[v[1]]) _allStandardsArray[v[1]] = JSON.parse(v[0]);
-            else {
-                if (!_allStandardsArray[v[1]].Areas) _allStandardsArray[v[1]].Areas = {};
-                _allStandardsArray[v[1]].Areas[v[2]] = JSON.parse(v[0]);
-                if (v[2].startsWith('POLYGON')) _allStandardsArray[v[1]].Areas[v[2]].Polygon = new OpenLayers.Geometry.Polygon(WKT_to_LinearRing(v[2]));
-            }
-        });
-        connectionEstablished = true;
+
+    try {
+        await $.getJSON(
+            `https://sheets.googleapis.com/v4/spreadsheets/${sheetCode}/values/Standards!A2:D?key=${apiKey}`
+        )
+            .done((serverSettings) => {
+                if (serverSettings.values.length > 0) {
+                    _.each(serverSettings.values, v => {
+                        if (!_allStandardsArray[v[1]]) _allStandardsArray[v[1]] = {};
+                        if (!_allStandardsArray[v[1]].States) _allStandardsArray[v[1]].States = {};
+                        if (!_allStandardsArray[v[1]].States[v[2]]) _allStandardsArray[v[1]].States[v[2]] = JSON.parse(v[0]);
+                        else {
+                            if (!_allStandardsArray[v[1]].States[v[2]].Areas) _allStandardsArray[v[1]].States[v[2]].Areas = {};
+                            _allStandardsArray[v[1]].States[v[2]].Areas[v[3]] = JSON.parse(v[0]);
+                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = new OpenLayers.Geometry.Polygon(WKT_to_LinearRing(v[3]));
+                        }
+                    });
+                    connectionEstablished = true;
+                } else {
+                    standardsFailFunc();
+                }
+            })
+            .fail(standardsFailFunc);
+    } catch (e) {
+        standardsFailFunc(null, null, e);
     }
+
     if (connectionEstablished) {
         $('#lsConnectionStatus').text('Good');
         $('#lsConnectionStatus').css('backgroundColor', 'lime');
@@ -914,9 +965,69 @@ async function loadSpreadsheet() {
     });
 
     getCurrentState();
+    setUIText();
+}
+
+function setUIText() {
+    let strings = {};
+    langLocality = I18n.currentLocale().toLowerCase();
+    if (TRANSLATIONS[langLocality]) {
+        strings = TRANSLATIONS[langLocality];
+    } else if (langLocality.includes('-') && TRANSLATIONS[langLocality.split('-')[0]]) {
+        strings = TRANSLATIONS[langLocality.split('-')[0]];
+    } else {
+        strings = TRANSLATIONS.default;
+    }
+
+    $('#ls-text-options').text(strings.optionsMenu);
+    $('#ls-text-activeScan').text(strings.activeScan);
+    $('#ls-text-enHighlights').text(strings.enHighlights);
+    $('#ls-text-detAbvRank').text(strings.detAbvRank);
+    $('#ls-text-saveCustLock').text(strings.saveCustLock);
+    $('#ls-text-saveScnSet').text(strings.saveScnSet);
+    $('#ls-text-manStateSel').text(strings.manStateSel);
+    $('#ls-text-disStatePop').text(strings.disStatePop);
+    $('#ls-text-ovrLockSegs').text(strings.ovrLockSegs);
+    $('#ls-text-othrSegTypes').text(strings.othrSegTypes);
+    $('#ls-text-addAttr').text(strings.addAttr);
+    $('#ls-text-lockStand').text(strings.lockStand);
+    $('#ls-text-lockStat').text(strings.lockStat);
+    $('.ls-option0').text(strings.option0);
+    $('.ls-optionHRCS').text(strings.optionHRCS);
+    $('.ls-option1').text(strings.option1);
+    $('.ls-option2').text(strings.option2);
+    $('.ls-option3').text(strings.option3);
+    $('.ls-option4').text(strings.option4);
+    $('.ls-option5').text(strings.option5);
+    $('.ls-option6').text(strings.option6);
+    $('.ls-FWY-Label').text(strings.roadFwy);
+    $('.ls-Ramp-Label').text(strings.roadRmp);
+    $('.ls-majH-Label').text(strings.roadMajH);
+    $('.ls-minH-Label').text(strings.roadMinH);
+    $('.ls-PS-Label').text(strings.roadPS);
+    $('.ls-LS-Label').text(strings.roadLS);
+    $('.ls-Pvt-Label').text(strings.roadPVT);
+    $('.ls-Plr-Label').text(strings.roadPLR);
+    $('.ls-Rail-Label').text(strings.roadRail);
+    $('.ls-Fry-Label').text(strings.roadFry);
+    $('.ls-Ofrd-Label').text(strings.roadOff);
+    $('.ls-Rnwy-Label').text(strings.roadRun);
+    $('.ls-Nonped-Label').text(strings.roadNonPed);
+    $('#ls-Unpaved-Status').text(strings.unpaved);
+    $('#ls-OneWay-Status').text(strings.oneWay);
+    $('#ls-HOV-Status').text(strings.hov);
+    $('#ls-WKT-Status').text(strings.wkt);
+    $('#ls-Toll-Status').text(strings.toll);
+    $('.ls-Seg-Quantity-Low').text('--');
+    $('.ls-Seg-Quantity-High').text('--');
+    $('.fa.fa-arrow-circle-up').css({ color: 'lightgrey', cursor: 'default' });
+    $('.fa.fa-arrow-circle-down').css({ color: 'lightgrey', cursor: 'default' });
+    $('.fa.fa-arrow-circle-up').attr('disabled', true);
+    $('.fa.fa-arrow-circle-down').attr('disabled', true);
 }
 
 function getCurrentState() {
+    checkCountry()
     const overrideEnable = getId('lsManualStateOverride').checked;
     const disablePopup = getId('lsDisableStatePopup').checked;
     let statusOk = false;
@@ -949,7 +1060,7 @@ function getCurrentState() {
 
 function checkCountry() {
     try {
-        country = W.model.getTopCountry().id;
+        country = W.model.getTopCountry().name;
     }
     catch(err) {
         country = null;
@@ -989,7 +1100,7 @@ function setCurrentStandards(stateName) {
     // Sets the locking standards based on the state and updates relevent UI components
 
     function applyStandards() {
-        _currentStateStandards = _allStandardsArray[stateName];
+        _currentStateStandards = _allStandardsArray[country].States[stateName];
 
         if (_currentStateStandards && _currentStateStandards.LS !== undefined) {
             if (!getId('lsEnableSaveValues').checked) {
