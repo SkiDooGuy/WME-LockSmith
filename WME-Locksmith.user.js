@@ -85,11 +85,12 @@ let tries = 0;
 let UpdateObj;
 let country;
 let langLocality = 'default';
+let featureLock = 2;
 
-console.log('Locksmith (LS) initializing...');
+console.log('Locksmith(LS): initializing...');
 
 const css = [
-    '.ls-Wrapper {width:100%;height:100%;background-color:white;border:2px solid white;border-radius:6px;font-size:12px;font-family:Poppins, "Helvetica Neue", Helvetica, "Open Sans", sans-serif;user-select:none;}',
+    '.ls-Wrapper {width:100%;height:100%;margin-bottom:30%;background-color:white;border:2px solid white;border-radius:6px;font-size:12px;font-family:Poppins, "Helvetica Neue", Helvetica, "Open Sans", sans-serif;user-select:none;}',
     '.ls-Body {display:block;padding:3px;}',
     '.ls-Header-Wrapper {display:block;width:100%;}',
     '.ls-Header-Text-Container {width:100%;padding:0 5px 0 5px;display:inline-block;border-bottom:1px solid grey;}',
@@ -180,10 +181,6 @@ function initLocksmith() {
                                                 <label class="ls-Label"><span id='ls-text-enHighlights' /><input type="checkbox" class="ls-Save-Status" id="lsEnableHighlightSeg">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
-                                            <li id="ls-Above-Rank-Tooltip" data-original-title='${TRANSLATIONS[langLocality].rankTooltip}'>
-                                                <label class="ls-Label"><span id='ls-text-detAbvRank' /><input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
-                                                <span class="ls-CheckBox" /></label>
-                                            </li>
                                             <li>
                                                 <label class="ls-Label"><span id='ls-text-saveCustLock' /><input type="checkbox" class="ls-Save-Status" id="lsEnableSaveValues">
                                                 <span class="ls-CheckBox" /></label>
@@ -198,6 +195,10 @@ function initLocksmith() {
                                             </li>
                                             <li>
                                                 <label class="ls-Label"><span id='ls-text-disStatePop' /><input type="checkbox" class="ls-Save-Status" id="lsDisableStatePopup">
+                                                <span class="ls-CheckBox" /></label>
+                                            </li>
+                                            <li id="ls-Above-Rank-Tooltip" data-original-title='${TRANSLATIONS[langLocality].rankTooltip}'>
+                                                <label class="ls-Label"><span id='ls-text-detAbvRank' /><input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
                                             <li id="ls-Higher-Level-Tooltip" data-original-title='${TRANSLATIONS[langLocality].highLockTooltip}'>
@@ -579,7 +580,7 @@ function initLocksmith() {
     // Attach HTML for tab to webpage
     UpdateObj = require('Waze/Action/UpdateObject');
     cakeFlavor = editorInfo.rank;
-    roadClear = cakeFlavor >= 2;
+    roadClear = cakeFlavor >= featureLock;
 
     // Script is initialized and the highlighting layer is created
     new WazeWrap.Interface.Tab('LS', $section.html(), initializeSettings);
@@ -755,15 +756,15 @@ async function saveSettings() {
     // Attempt to connect to the WazeWrap setting store server
     const serverSave = await WazeWrap.Remote.SaveSettings('LsUS_Settings', localsettings);
 
-    if (serverSave === null) console.log('LsUS: User PIN not set in WazeWrap tab');
-    else if (serverSave === false) console.log('LsUS: Unable to save settings to server');
+    if (serverSave === null) console.log('LS: User PIN not set in WazeWrap tab');
+    else if (serverSave === false) console.log('LS: Unable to save settings to server');
 }
 
 async function loadSettings() {
     const localSettings = $.parseJSON(localStorage.getItem('LsUS_Settings'));
     // Attempt connection to WazeWrap setting server to retrieve settings
     const serverSettings = await WazeWrap.Remote.RetrieveSettings('LsUS_Settings');
-    if (!serverSettings) console.log('LsUS: Error communicating with WW settings server');
+    if (!serverSettings) console.log('LS: Error communicating with WW settings server');
     // Default checkbox settings
     const defaultsettings = {
         lastSaveAction: null,
@@ -792,7 +793,7 @@ async function loadSettings() {
     LsSettings = $.extend({}, defaultsettings, localSettings);
     if (serverSettings && serverSettings.lastSaveAction > LsSettings.lastSaveAction) {
         $.extend(LsSettings, serverSettings);
-        console.log('Locksmith server settings used');
+        console.log('LS: server settings used');
     }
     if (LsSettings.EnableSaveSettings === false) LsSettings = defaultsettings;
     // Sets saved values for segment locks when desired
