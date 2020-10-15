@@ -560,7 +560,7 @@ function initLocksmith() {
                     </div>
                 </div>
                 <div class="ls-Section-Container">
-                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS[langLocality].highLockTooltip}'><span id='ls-text-addAttr' /></div>
+                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS[langLocality].attrTooltip}'><span id='ls-text-addAttr' /></div>
                     <div class="ls-Locking-Attributes">
                         <label class="ls-Attr-Label">
                             <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Unpaved-Enable"><span class="ls-Attr-CheckBox" id="ls-Unpaved-Status" />
