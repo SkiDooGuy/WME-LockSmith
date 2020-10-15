@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME-Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.10.14.03
+// @version      2020.10.14.04
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
