@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME-Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.10.14.01
+// @version      2020.10.14.02
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -633,6 +633,7 @@ async function initializeSettings() {
         LsSettings.EnableSaveValues = false;
         saveSettings();
         resetUISegStats();
+        generateStateList();
         getCurrentState();
         setCurrentStandards(_currentState);
     });
@@ -1050,7 +1051,7 @@ function setUIText() {
 }
 
 function getCurrentState() {
-    checkCountry()
+    checkCountry();
     const overrideEnable = getId('lsManualStateOverride').checked;
     const disablePopup = getId('lsDisableStatePopup').checked;
     let statusOk = false;
@@ -1117,12 +1118,18 @@ function generateStateList() {
 }
 
 function setCurrentStandards(stateName) {
+    let attempts = 0;
     // Sets the locking standards based on the state and updates relevent UI components
+    _.each(W.model.states.getObjectArray(), s => {
+        if (s.name === stateName) {
+            country = W.model.countries.getObjectById(s.countryID).name;
+        }
+    });
 
     function applyStandards() {
         _currentStateStandards = _allStandardsArray[country].States[stateName];
 
-        if (_currentStateStandards && _currentStateStandards.LS !== undefined) {
+        if (_currentStateStandards && _currentStateStandards.LS) {
             if (!getId('lsEnableSaveValues').checked) {
                 $('#lsLockStreetSelect').val(_currentStateStandards.LS);
                 $('#lsLockPSSelect').val(_currentStateStandards.PS);
@@ -1183,7 +1190,17 @@ function setCurrentStandards(stateName) {
             }
 
             console.log(`LS: Lock levels loaded for: ${stateName}`);
-        } else setTimeout(() => { applyStandards(); }, 200);
+        } else {
+            if (attempts < 5) {
+                setTimeout(() => { applyStandards(); }, 200);
+            } else {
+                // console.log('LS: Error in settings current standards');
+                generateStateList();
+                getCurrentState();
+                setCurrentStandards(_currentState);
+            }
+            attempts++;
+        }
     }
     applyStandards();
 }
