@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WME-Locksmith
+// @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.10.15.01
+// @version      2020.10.19.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -17,14 +17,11 @@
 /* global OpenLayers */
 /* global _ */
 /* global require */
-/* global _allStandardsArray */
 
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
-- Now accounts for country when getting lock standards<br>
-- Translations ready<br>
-- Safety locks in place for rank based features<br><br>
+- Translations ready<br><br>
 <b>FIXES:</b><br>
 -<br><br>`;
 const TRANSLATIONS = {
@@ -75,7 +72,7 @@ const TRANSLATIONS = {
 
 };
 
-_allStandardsArray = {};
+let _allStandardsArray = {};
 let _currentStateStandards = {};
 let LsSettings = {};
 let _currentState = '';
@@ -590,7 +587,7 @@ function initLocksmith() {
     // Script is initialized and the highlighting layer is created
     new WazeWrap.Interface.Tab('LS', $section.html(), initializeSettings);
 
-    WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith-us', 'https://www.waze.com/forum/viewtopic.php?f=1286&t=285583');
+    WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith', 'https://www.waze.com/forum/viewtopic.php?f=819&t=285583');
 
     LocksmithHighlightLayer = new OpenLayers.Layer.Vector('LocksmithHighlightLayer', { uniqueName: '_LocksmithHighlightLayer' });
     W.map.addLayer(LocksmithHighlightLayer);
