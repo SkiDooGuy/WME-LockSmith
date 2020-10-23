@@ -166,7 +166,7 @@ function initLocksmith() {
         '<div class="ls-Body">',
         `<div class="ls-Header-Wrapper">
                     <div class="ls-Header-Text-Container">
-                        <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}<a href='https://docs.google.com/spreadsheets/d/1DJEk390OYv5jWXEINl6PF3I1A8y1WrwrdPIsAL7SihI/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}' />
+                        <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}<a href='https://docs.google.com/spreadsheets/d/1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}' />
                     </div>
                     <div class="ls-Options-Container" style="display:block;height:35px;padding:2px 10px 0 10px;width:100%">
                         <div style="display:inline-block;float:left;position:relative;width:60%;">
