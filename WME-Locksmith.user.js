@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.10.19.01
+// @version      2020.11.19.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -21,9 +21,9 @@
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
-- Translations ready<br><br>
+- <br><br>
 <b>FIXES:</b><br>
--<br><br>`;
+- Fixed issue with translations which would result in missing UI elements<br><br>`;
 const TRANSLATIONS = {
     default: {
         scriptTitle: 'Locksmith',
@@ -199,11 +199,11 @@ function initLocksmith() {
                                                 <label class="ls-Label"><span id='ls-text-disStatePop' /><input type="checkbox" class="ls-Save-Status" id="lsDisableStatePopup">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
-                                            <li id="ls-Above-Rank-Tooltip" data-original-title='${TRANSLATIONS[langLocality].rankTooltip}'>
+                                            <li id="ls-Above-Rank-Tooltip" data-original-title='${TRANSLATIONS.default.rankTooltip}'>
                                                 <label class="ls-Label"><span id='ls-text-detAbvRank' /><input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
-                                            <li id="ls-Higher-Level-Tooltip" data-original-title='${TRANSLATIONS[langLocality].highLockTooltip}'>
+                                            <li id="ls-Higher-Level-Tooltip" data-original-title='${TRANSLATIONS.default.highLockTooltip}'>
                                                 <label class="ls-Label" style="font-weight:bold;"><span id='ls-text-ovrLockSegs' /><input type="checkbox" class="ls-Save-Status" id="lsEnableResetHigher">
                                                 <span class="ls-CheckBox" /></label>
                                             </li>
@@ -212,12 +212,12 @@ function initLocksmith() {
                                 </div>
                             </div>
                             <div class="ls-Button-Container" style="width:50%;left:-20px">
-                                <input type="button" class="ls-Button" id="ls-Reset-Standards-Display" style="position:relative;" value='${TRANSLATIONS[langLocality].resetValue}' data-original-title='${TRANSLATIONS[langLocality].resetTooltip}'>
+                                <input type="button" class="ls-Button" id="ls-Reset-Standards-Display" style="position:relative;" value='${TRANSLATIONS.default.resetValue}' data-original-title='${TRANSLATIONS.default.resetTooltip}'>
                             </div>
                         </div>
                         <div class="ls-Button-Container">
-                            <input type="button" class="ls-Button" style="position:relative;left:5px;" id="ls-Maual-Scan-Activate" value='${TRANSLATIONS[langLocality].scanValue}'>
-                            <input type="button" class="ls-Button" style="float:right;" id="ls-Lock-All-Submit" value='${TRANSLATIONS[langLocality].lockAllValue}'>
+                            <input type="button" class="ls-Button" style="position:relative;left:5px;" id="ls-Maual-Scan-Activate" value='${TRANSLATIONS.default.scanValue}'>
+                            <input type="button" class="ls-Button" style="float:right;" id="ls-Lock-All-Submit" value='${TRANSLATIONS.default.lockAllValue}'>
                         </div>
                     </div>
                 </div>
@@ -231,7 +231,7 @@ function initLocksmith() {
                         <div class="ls-Section-Container" id="ls-Seg-Types-Main">
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockStreetSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -254,7 +254,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockPSSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -277,7 +277,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockMinHSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -300,7 +300,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockMajHSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -323,7 +323,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockRmpSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-HRCS">${TRANSLATIONS[langLocality].optionHRCS}</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-HRCS">${TRANSLATIONS.default.optionHRCS}</option>
                                     <option class="ls-Lock-Option-1">1</option><option class="ls-Lock-Option-2">2</option>
                                     <option class="ls-Lock-Option-3">3</option><option class="ls-Lock-Option-4">4</option>
                                     <option class="ls-Lock-Option-5">5</option><option class="ls-Lock-Option-6">6</option>
@@ -346,7 +346,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockFwySelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -386,7 +386,7 @@ function initLocksmith() {
                         <div class="ls-Section-Container" id="ls-Seg-Types-Alt" style="display:none;">
                             <div class="ls-Lock-Options" style="margin-top:3px;">
                                 <select class="ls-Select" id="lsLockPvtSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -409,7 +409,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockPlrSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -432,7 +432,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockRailSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -455,7 +455,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockFrySelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -478,7 +478,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockRnwySelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -501,7 +501,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockOfrdSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -524,7 +524,7 @@ function initLocksmith() {
 
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockNonpedSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS[langLocality].option0}</option><option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
                                     <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
@@ -557,7 +557,7 @@ function initLocksmith() {
                     </div>
                 </div>
                 <div class="ls-Section-Container">
-                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS[langLocality].attrTooltip}'><span id='ls-text-addAttr' /></div>
+                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS.default.attrTooltip}'><span id='ls-text-addAttr' /></div>
                     <div class="ls-Locking-Attributes">
                         <label class="ls-Attr-Label">
                             <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Unpaved-Enable"><span class="ls-Attr-CheckBox" id="ls-Unpaved-Status" />
@@ -1000,6 +1000,12 @@ function setUIText() {
         strings = TRANSLATIONS.default;
     }
 
+    Object.keys(TRANSLATIONS.default).forEach((transString) => {
+        if (!strings.hasOwnProperty(transString) || strings[transString] == "") {
+            strings[transString] = TRANSLATIONS.default[transString];
+        }
+    });
+
     $('#ls-text-options').text(strings.optionsMenu);
     $('#ls-text-activeScan').text(strings.activeScan);
     $('#ls-text-enHighlights').text(strings.enHighlights);
@@ -1045,6 +1051,14 @@ function setUIText() {
     $('.fa.fa-arrow-circle-down').css({ color: 'lightgrey', cursor: 'default' });
     $('.fa.fa-arrow-circle-up').attr('disabled', true);
     $('.fa.fa-arrow-circle-down').attr('disabled', true);
+
+    $('#ls-Above-Rank-Tooltip').attr('data-original-title', strings.rankTooltip);
+    $('#ls-Higher-Level-Tooltip').attr('data-original-title', strings.highLockTooltip);
+    $('#ls-Reset-Standards-Display').attr('value', strings.resetValue);
+    $('#ls-Reset-Standards-Display').attr('data-original-title', strings.resetTooltip);
+    $('#ls-Maual-Scan-Activate').attr('data-original-title', strings.scanValue);
+    $('#ls-ls-Lock-All-Submit').attr('data-original-title', strings.lockAllValue);
+    $('#ls-Add-Att-Info').attr('data-original-title', strings.attrTooltip);
 }
 
 function getCurrentState() {
