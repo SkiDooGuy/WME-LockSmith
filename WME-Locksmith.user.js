@@ -152,6 +152,11 @@ function Locksmithbootstrap() {
 }
 
 function initLocksmith() {
+    // Checks to ensure WME is in editing mode and not HN or Event mode
+    if (!W.editingMediator.attributes.editingHouseNumbers) {
+        return console.log('LS: WME is not in editing mode');
+    }
+    
     editorInfo = W.loginManager.user;
 
     const $section = $('<div>');
