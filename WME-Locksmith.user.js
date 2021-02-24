@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2020.11.19.01
+// @version      2021.02.23.00
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -153,10 +153,10 @@ function Locksmithbootstrap() {
 
 function initLocksmith() {
     // Checks to ensure WME is in editing mode and not HN or Event mode
-    if (W.app.modeController.model.attributes.mode !== 0 && !W.editingMediator.attributes.editingHouseNumbers) {
+    if (!W.editingMediator.attributes.editingHouseNumbers) {
         return console.log('LS: WME is not in editing mode');
     }
-
+    
     editorInfo = W.loginManager.user;
 
     const $section = $('<div>');
@@ -1566,7 +1566,7 @@ function relockAll() {
 }
 
 function tryScan() {
-    if (W.app.modeController.model.attributes.mode == 0 && !W.editingMediator.attributes.editingHouseNumbers && getId('lsEnableActiveScan').checked) scanArea(false);
+    if (!W.editingMediator.attributes.editingHouseNumbers && getId('lsEnableActiveScan').checked) scanArea(false);
 }
 
 function scanArea(manual) {
