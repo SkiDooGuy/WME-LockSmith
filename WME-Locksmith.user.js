@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2021.02.23.02
+// @version      2021.07.13.00
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -1351,6 +1351,7 @@ function processSegment(seg) {
     if (segStatus.toLowerCase() !== 'insert' && segStatus.toLowerCase() !== 'delete') {
         // Gather/verify info attached to segment
         const priSt = W.model.streets.getObjectById(segAtt.primaryStreetID);
+        if (priSt == null) return;
         const cityObj = W.model.cities.getObjectById(priSt.cityID);
         const cityName = cityObj.attributes.name;
         const segStateName = W.model.states.getObjectById(cityObj.attributes.stateID).name;
