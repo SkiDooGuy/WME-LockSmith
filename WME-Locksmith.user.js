@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2021.07.13.00
+// @version      2021.07.28.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -21,9 +21,9 @@
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
-- <br><br>
+- LS now supports countries without states configured!<br><br>
 <b>FIXES:</b><br>
-- Fixed issue with translations which would result in missing UI elements<br><br>`;
+- Fixed from WME update<br><br>`;
 const TRANSLATIONS = {
     default: {
         scriptTitle: 'Locksmith',
@@ -152,7 +152,6 @@ function Locksmithbootstrap() {
 }
 
 function initLocksmith() {
-    
     editorInfo = W.loginManager.user;
 
     const $section = $('<div>');
@@ -162,46 +161,71 @@ function initLocksmith() {
         '<div class="ls-Body">',
         `<div class="ls-Header-Wrapper">
                     <div class="ls-Header-Text-Container">
-                        <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}<a href='https://docs.google.com/spreadsheets/d/1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}' />
+                        <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}
+                        <a href='https://docs.google.com/spreadsheets/d/1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}'></a>
                     </div>
                     <div class="ls-Options-Container" style="display:block;height:35px;padding:2px 10px 0 10px;width:100%">
                         <div style="display:inline-block;float:left;position:relative;width:60%;">
                             <div class="ls-Options-Container" style="margin:3px 0 0 0;">
                                 <div class="ls-Options-Menu">
-                                    <div><span id='ls-text-options' /></div>
+                                    <div><span id='ls-text-options'></span></div>
                                     <div class="ls-Options-Dropdown-Menu">
                                         <ul>
                                             <li>
-                                                <label class="ls-Label"><span id='ls-text-activeScan' /><input type="checkbox" class="ls-Save-Status" id="lsEnableActiveScan">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label">
+                                                    <span id='ls-text-activeScan'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsEnableActiveScan">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label"><span id='ls-text-enHighlights' /><input type="checkbox" class="ls-Save-Status" id="lsEnableHighlightSeg">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label">
+                                                    <span id='ls-text-enHighlights'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsEnableHighlightSeg">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label"><span id='ls-text-saveCustLock' /><input type="checkbox" class="ls-Save-Status" id="lsEnableSaveValues">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label">
+                                                    <span id='ls-text-saveCustLock'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsEnableSaveValues">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label"><span id='ls-text-saveScnSet' /><input type="checkbox" class="ls-Save-Status" id="lsEnableSaveSettings">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label">
+                                                    <span id='ls-text-saveScnSet'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsEnableSaveSettings">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label" style="margin:0px;"><span id='ls-text-manStateSel' /><input type="checkbox" id="lsManualStateOverride">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label" style="margin:0px;">
+                                                    <span id='ls-text-manStateSel'></span>
+                                                    <input type="checkbox" id="lsManualStateOverride">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li>
-                                                <label class="ls-Label"><span id='ls-text-disStatePop' /><input type="checkbox" class="ls-Save-Status" id="lsDisableStatePopup">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label">
+                                                    <span id='ls-text-disStatePop'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsDisableStatePopup">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li id="ls-Above-Rank-Tooltip" data-original-title='${TRANSLATIONS.default.rankTooltip}'>
-                                                <label class="ls-Label"><span id='ls-text-detAbvRank' /><input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label">
+                                                    <span id='ls-text-detAbvRank'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsEnableIgnoreRank">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                             <li id="ls-Higher-Level-Tooltip" data-original-title='${TRANSLATIONS.default.highLockTooltip}'>
-                                                <label class="ls-Label" style="font-weight:bold;"><span id='ls-text-ovrLockSegs' /><input type="checkbox" class="ls-Save-Status" id="lsEnableResetHigher">
-                                                <span class="ls-CheckBox" /></label>
+                                                <label class="ls-Label" style="font-weight:bold;">
+                                                    <span id='ls-text-ovrLockSegs'></span>
+                                                    <input type="checkbox" class="ls-Save-Status" id="lsEnableResetHigher">
+                                                    <span class="ls-CheckBox"></span>
+                                                </label>
                                             </li>
                                         </ul>
                                     </div>
@@ -219,8 +243,8 @@ function initLocksmith() {
                 </div>
                 <div class="ls-Section-Container" style="margin-top:0px;">
                     <div class="ls-Section-Container">
-                        <span style="float:left;border-bottom:1px solid black;" id='ls-text-lockStand' />
-                        <span style="float:right;border-bottom:1px solid black;" id='ls-text-lockStat' />
+                        <span style="float:left;border-bottom:1px solid black;" id='ls-text-lockStand'></span>
+                        <span style="float:right;border-bottom:1px solid black;" id='ls-text-lockStat'></span>
                     </div>
 
                     <div class="ls-Section-Container">
@@ -232,18 +256,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-LS-Label" />
+                                <span class="ls-LS-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-LS" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-LS-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-LS-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-LS-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-LS-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-LS-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-LS-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-LS-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-LS-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-LS" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-LS" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -255,18 +279,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-PS-Label" />
+                                <span class="ls-PS-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-PS" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-PS-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-PS-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-PS-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-PS-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-PS-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-PS-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-PS-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-PS-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-PS" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-PS" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -278,18 +302,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-minH-Label" />
+                                <span class="ls-minH-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-minH" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-minH-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-minH-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-minH-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-minH-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-minH-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-minH-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-minH-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-minH-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-minH" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-minH" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -301,18 +325,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-majH-Label" />
+                                <span class="ls-majH-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-majH" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-majH-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-majH-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-majH-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-majH-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-majH-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-majH-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-majH-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-majH-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-majH" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-majH" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -324,18 +348,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-3">3</option><option class="ls-Lock-Option-4">4</option>
                                     <option class="ls-Lock-Option-5">5</option><option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Ramp-Label" />
+                                <span class="ls-Ramp-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Rmp" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Rmp-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Rmp-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Rmp-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Rmp-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Rmp-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Rmp-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Rmp-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Rmp-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Rmp" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Rmp" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -347,35 +371,35 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-FWY-Label" />
+                                <span class="ls-FWY-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Fwy" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Fwy-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Fwy-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Fwy-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Fwy-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Fwy-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Fwy-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Fwy-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Fwy-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Fwy" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Fwy" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="ls-Lock-Options">
-                            <div style="display:inline-block;float:left;cursor:pointer;" id="ls-Othr-Seg-Label"><span id='ls-text-othrSegTypes' /></div>
+                            <div style="display:inline-block;float:left;cursor:pointer;" id="ls-Othr-Seg-Label"><span id='ls-text-othrSegTypes'></span></div>
                             <div class="ls-Seg-Result" style="top:5px;" id="rl-Othr-Result-Container">
                                 <div class="ls-IL-Block">
-                                    <span class="fa fa-arrow-circle-up" id="ls-othr-Lock-Up" />
-                                    <span class="ls-Seg-Quantity-Low" id="ls-othr-Low-Quan" />
+                                    <span class="fa fa-arrow-circle-up" id="ls-othr-Lock-Up"></span>
+                                    <span class="ls-Seg-Quantity-Low" id="ls-othr-Low-Quan"></span>
                                 </div>
                                 <div class="ls-IL-Block">
-                                    <span class="fa fa-arrow-circle-down" id="ls-othr-Lock-Down" />
-                                    <span class="ls-Seg-Quantity-High" id="ls-othr-High-Quan" />
+                                    <span class="fa fa-arrow-circle-down" id="ls-othr-Lock-Down"></span>
+                                    <span class="ls-Seg-Quantity-High" id="ls-othr-High-Quan"></span>
                                 </div>
-                                <span class="fa fa-lock" id="icon-Lock-othr" style="color:lightgrey;padding-left:10px;float:right;" />
+                                <span class="fa fa-lock" id="icon-Lock-othr" style="color:lightgrey;padding-left:10px;float:right;"></span>
                             </div>
                         </div>
 
@@ -387,18 +411,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Pvt-Label" />
+                                <span class="ls-Pvt-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Pvt" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Pvt-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Pvt-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Pvt-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Pvt-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Pvt-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Pvt-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Pvt-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Pvt-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Pvt" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Pvt" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -410,18 +434,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Plr-Label" />
+                                <span class="ls-Plr-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Plr" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Plr-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Plr-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Plr-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Plr-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Plr-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Plr-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Plr-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Plr-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Plr" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Plr" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -433,18 +457,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Rail-Label" />
+                                <span class="ls-Rail-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Rail" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Rail-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Rail-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Rail-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Rail-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Rail-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Rail-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Rail-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Rail-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Rail" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Rail" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -456,18 +480,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Fry-Label" />
+                                <span class="ls-Fry-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Fry" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Fry-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Fry-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Fry-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Fry-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Fry-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Fry-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Fry-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Fry-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Fry" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Fry" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -479,18 +503,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Rnwy-Label" />
+                                <span class="ls-Rnwy-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Rnwy" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Rnwy-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Rnwy-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Rnwy-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Rnwy-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Rnwy-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Rnwy-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Rnwy-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Rnwy-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Rnwy" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Rnwy" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -502,18 +526,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Ofrd-Label" />
+                                <span class="ls-Ofrd-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Ofrd" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Ofrd-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Ofrd-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Ofrd-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Ofrd-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Ofrd-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Ofrd-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Ofrd-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Ofrd-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Ofrd" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Ofrd" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -525,18 +549,18 @@ function initLocksmith() {
                                     <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
-                                <span class="ls-Nonped-Label" />
+                                <span class="ls-Nonped-Label"></span>
                                 <div class="ls-Seg-Result">
                                     <div id="ls-Seg-Result-Nonped" style="float:right;">
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-up" id="ls-Nonped-Lock-Up" />
-                                            <span class="ls-Seg-Quantity-Low" id="ls-Nonped-Low-Quan" />
+                                            <span class="fa fa-arrow-circle-up" id="ls-Nonped-Lock-Up"></span>
+                                            <span class="ls-Seg-Quantity-Low" id="ls-Nonped-Low-Quan"></span>
                                         </div>
                                         <div class="ls-IL-Block">
-                                            <span class="fa fa-arrow-circle-down" id="ls-Nonped-Lock-Down" />
-                                            <span class="ls-Seg-Quantity-High" id="ls-Nonped-High-Quan" />
+                                            <span class="fa fa-arrow-circle-down" id="ls-Nonped-Lock-Down"></span>
+                                            <span class="ls-Seg-Quantity-High" id="ls-Nonped-High-Quan"></span>
                                         </div>
-                                        <span class="fa fa-lock" id="icon-Lock-Nonped" style="color:lightgrey;padding-left:10px;float:right;" />
+                                        <span class="fa fa-lock" id="icon-Lock-Nonped" style="color:lightgrey;padding-left:10px;float:right;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -546,29 +570,29 @@ function initLocksmith() {
                 </div>
                 <div class="ls-Section-Container" style="margin-top:5px;border-top:.5px solid lightgrey;">
                     <div class="ls-Section-Container" style="margin-top:3px;">
-                        Current Standards:&nbsp;&nbsp;<span id="ls-Current-State-Display" style="font-weight:bold;" />
+                        Current Standards:&nbsp;&nbsp;<span id="ls-Current-State-Display" style="font-weight:bold;"></span>
                         <div id="ls-State-Select-Container" style="display:none;">
                             <select class="ls-Select" id="ls-State-Selection"></select>
                         </div>
                     </div>
                 </div>
                 <div class="ls-Section-Container">
-                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS.default.attrTooltip}'><span id='ls-text-addAttr' /></div>
+                    <div class="ls-Section-Header" style="float:left;margin-top:5px;" id="ls-Add-Att-Info" data-original-title='${TRANSLATIONS.default.attrTooltip}'><span id='ls-text-addAttr'></span></div>
                     <div class="ls-Locking-Attributes">
                         <label class="ls-Attr-Label">
-                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Unpaved-Enable"><span class="ls-Attr-CheckBox" id="ls-Unpaved-Status" />
+                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Unpaved-Enable"><span class="ls-Attr-CheckBox" id="ls-Unpaved-Status"></span>
                         </label>
                         <label class="ls-Attr-Label">
-                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-OneWay-Enable"><span class="ls-Attr-CheckBox" id="ls-OneWay-Status" />
+                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-OneWay-Enable"><span class="ls-Attr-CheckBox" id="ls-OneWay-Status"></span>
                         </label>
                         <label class="ls-Attr-Label">
-                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-HOV-Enable"><span class="ls-Attr-CheckBox" id="ls-HOV-Status" />
+                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-HOV-Enable"><span class="ls-Attr-CheckBox" id="ls-HOV-Status"></span>
                         </label>
                         <label class="ls-Attr-Label">
-                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Toll-Enable"><span class="ls-Attr-CheckBox" id="ls-Toll-Status" />
+                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-Toll-Enable"><span class="ls-Attr-CheckBox" id="ls-Toll-Status"></span>
                         </label>
                         <label class="ls-Attr-Label">
-                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-WKT-Enable"><span class="ls-Attr-CheckBox" id="ls-WKT-Status" />
+                            <input type="checkbox" class="ls-Att-Ck-Form" id="ls-WKT-Enable"><span class="ls-Attr-CheckBox" id="ls-WKT-Status"></span>
                         </label>
                     </div>
                </div>`,
@@ -589,11 +613,6 @@ function initLocksmith() {
     W.map.addLayer(LocksmithHighlightLayer);
     LocksmithHighlightLayer.setVisibility(true);
 
-    setTimeout(() => {
-        if (cakeFlavor < 4) {
-            WazeWrap.Alerts.warning(GM_info.script.name, `Editor rank below R5, the maximum you'll be able to lock segments is R${cakeFlavor + 1}`);
-        }
-    }, 3000);
     console.log('LS: loaded');
 }
 
@@ -917,7 +936,10 @@ async function loadSpreadsheet() {
                     _.each(serverSettings.values, v => {
                         if (!_allStandardsArray[v[1]]) _allStandardsArray[v[1]] = {};
                         if (!_allStandardsArray[v[1]].States) _allStandardsArray[v[1]].States = {};
-                        if (!_allStandardsArray[v[1]].States[v[2]]) _allStandardsArray[v[1]].States[v[2]] = JSON.parse(v[0]);
+                        if (!_allStandardsArray[v[1]].States[v[2]]) {
+                            const stateName = v[2] === undefined ? 'default' : v[2];
+                            _allStandardsArray[v[1]].States[stateName] = JSON.parse(v[0]);
+                        }
                         else {
                             if (!_allStandardsArray[v[1]].States[v[2]].Areas) _allStandardsArray[v[1]].States[v[2]].Areas = {};
                             _allStandardsArray[v[1]].States[v[2]].Areas[v[3]] = JSON.parse(v[0]);
@@ -942,6 +964,7 @@ async function loadSpreadsheet() {
         $('#lsConnectionStatus').css('backgroundColor', 'red');
     }
 
+    // console.log(_allStandardsArray);
     // Process state standards for later use
     _.each(_allStandardsArray, stateKey => {
         for (const k in stateKey) {
@@ -1074,9 +1097,11 @@ function getCurrentState() {
                     $('#ls-Current-State-Display').text('Multiple');
                 } else statusOk = true;
             } else if (statesAvailable.length === 1 && !overrideEnable) {
-                if (_currentState !== statesAvailable[0].name) {
-                    _currentState = statesAvailable[0].name;
-                    $('#ls-Current-State-Display').text(_currentState);
+                const stateName = statesAvailable[0].name === '' ? 'default' : statesAvailable[0].name;
+                if (_currentState !== stateName) {
+                    _currentState = stateName;
+                    const displayText = _currentState === 'default' ? W.model.getTopCountry().name : _currentState;
+                    $('#ls-Current-State-Display').text(displayText);
                     setCurrentStandards(_currentState);
                     statusOk = true;
                 } else statusOk = true;
@@ -1126,15 +1151,18 @@ function generateStateList() {
 function setCurrentStandards(stateName) {
     let attempts = 0;
     let proceed = false;
+    let countryName;
     // Sets the locking standards based on the state and updates relevent UI components
     function applyStandards() {
         if (W.model.states.getObjectArray().length > 0) {
             _.each(W.model.states.getObjectArray(), s => {
-                if (s.name === stateName) {
-                    if (W.model.countries.getObjectById(s.countryID).name) {
-                        country = W.model.countries.getObjectById(s.countryID).name;
+                const modelName = s.name === '' ? 'default' : s.name;
+                if (modelName === stateName) {
+                    countryName = s.countryID === 0 ? W.model.getTopCountry().name : W.model.countries.getObjectById(s.countryID).name;
+                    if (countryName !== null) {
                         proceed = true;
-                        _currentStateStandards = _allStandardsArray[country].States[stateName];
+                        _currentStateStandards = _allStandardsArray[countryName].States[stateName];
+                        // console.log(_currentStateStandards);
                     }
                 }
             });
@@ -1200,7 +1228,8 @@ function setCurrentStandards(stateName) {
                 $('#ls-WKT-Status').css({ 'background-image': 'repeating-linear-gradient(135deg,lightgrey,grey 10px,black 4px)', 'background-color': '' });
             }
 
-            console.log(`LS: Lock levels loaded for: ${stateName}`);
+            const logText = stateName === 'default' ? countryName : stateName;
+            console.log(`LS: Lock levels loaded for: ${logText}`);
         } else {
             if (attempts < 3) {
                 setTimeout(() => { applyStandards(); }, 200);
@@ -1354,7 +1383,7 @@ function processSegment(seg) {
         if (priSt == null) return;
         const cityObj = W.model.cities.getObjectById(priSt.cityID);
         const cityName = cityObj.attributes.name;
-        const segStateName = W.model.states.getObjectById(cityObj.attributes.stateID).name;
+        const segStateName = W.model.states.getObjectById(cityObj.attributes.stateID).name === '' ? 'default' : W.model.states.getObjectById(cityObj.attributes.stateID).name;
         // Setup object to verify certain segment attributes
         const conditions = {
             isOneWay: false,
