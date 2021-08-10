@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2021.07.28.01
+// @version      2021.08.10.01
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -21,9 +21,9 @@
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
 const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
-- LS now supports countries without states configured!<br><br>
+- Allowed for "Current Standards" string to be translated<br><br>
 <b>FIXES:</b><br>
-- Fixed from WME update<br><br>`;
+- <br><br>`;
 const TRANSLATIONS = {
     default: {
         scriptTitle: 'Locksmith',
@@ -66,6 +66,7 @@ const TRANSLATIONS = {
         hov: 'HOV',
         wkt: 'WKT',
         toll: 'Toll',
+        currentStandards: 'Current Standards',
         option0: 'Auto',
         optionHRCS: 'HRCS'
     }
@@ -570,7 +571,7 @@ function initLocksmith() {
                 </div>
                 <div class="ls-Section-Container" style="margin-top:5px;border-top:.5px solid lightgrey;">
                     <div class="ls-Section-Container" style="margin-top:3px;">
-                        Current Standards:&nbsp;&nbsp;<span id="ls-Current-State-Display" style="font-weight:bold;"></span>
+                        <span id='ls-currentStandards-label'></span>:&nbsp;&nbsp;<span id="ls-Current-State-Display" style="font-weight:bold;"></span>
                         <div id="ls-State-Select-Container" style="display:none;">
                             <select class="ls-Select" id="ls-State-Selection"></select>
                         </div>
@@ -1064,6 +1065,7 @@ function setUIText() {
     $('#ls-HOV-Status').text(strings.hov);
     $('#ls-WKT-Status').text(strings.wkt);
     $('#ls-Toll-Status').text(strings.toll);
+    $('#ls-currentStandards-label').text(strings.currentStandards);
     $('.ls-Seg-Quantity-Low').text('--');
     $('.ls-Seg-Quantity-High').text('--');
     $('.fa.fa-arrow-circle-up').css({ color: 'lightgrey', cursor: 'default' });
