@@ -1098,7 +1098,7 @@ function getCurrentState() {
                     if (!disablePopup) WazeWrap.Alerts.info(GM_info.script.name, 'Multiple States available, please manually set the correct state or zoom in/out to reset the States layer');
                     $('#ls-Current-State-Display').text('Multiple');
                 } else statusOk = true;
-            } else if (statesAvailable.length === 1 && !overrideEnable) {
+            } else if (statesAvailable.length === 1) { // && !overrideEnable) {
                 const stateName = statesAvailable[0].name === '' ? 'default' : statesAvailable[0].name;
                 if (_currentState !== stateName) {
                     _currentState = stateName;
