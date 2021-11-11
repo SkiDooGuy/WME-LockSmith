@@ -1082,6 +1082,35 @@ function setUIText() {
     $('#ls-Add-Att-Info').attr('data-original-title', strings.attrTooltip);
 }
 
+function getstatesAvailable() {
+    const allstates = W.model.states.getObjectArray();
+    const filtered = []
+    //    console.log('Alle')
+    console.log(allstates)
+    //    console.log(allstates.length)
+    if (allstates) {
+        if (allstates.length > 1) {
+            for( var i = 0; i < allstates.length; i++){
+                //                console.log(i)
+                //                console.log('bearbeite: ' + allstates[i].name);
+                try {
+                    var test = _allStandardsArray[W.model.countries.getObjectById(allstates[i].countryID).name].States[allstates[i].name];
+                    filtered.push(allstates[i])
+                }
+                catch {
+                    //                    console.log('skipping: ' + allstates[i].name);
+                    //                    allstates.splice(i, 1);
+                }
+            }
+        } else {
+            filtered.push(allstates[0])
+        }
+    }
+    //    console.log('gefiltert')
+    //    console.log(filtered)
+    return filtered;
+}
+
 function getCurrentState() {
     const overrideEnable = getId('lsManualStateOverride').checked;
     const disablePopup = getId('lsDisableStatePopup').checked;
@@ -1089,7 +1118,7 @@ function getCurrentState() {
     let attempts = 0;
 
     function stateModelStatus() {
-        const statesAvailable = W.model.states.getObjectArray();
+        const statesAvailable = getstatesAvailable();
 
         if (statesAvailable) {
             // Verify the number of states currently available and either prompt for manual selection or set standards based on that state
@@ -1127,7 +1156,7 @@ function checkCountry() {
 function generateStateList() {
     const stateSelector = getId('ls-State-Selection');
     const currOptionsLength = stateSelector.childNodes.length;
-    const statesAvailable = W.model.states.getObjectArray();
+    const statesAvailable = getstatesAvailable();
 
     // Removes any options currently attached to the select
     if (currOptionsLength > 0) {
@@ -2067,7 +2096,7 @@ function scanArea(manual) {
                         }
                         if (lsHigh > 0) {
                             changeUI('#ls-LS-High-Quan', 1, 'text', lsHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-LS-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-LS-Lock-Down').click(() => {
@@ -2421,7 +2450,7 @@ function scanArea(manual) {
                         }
                         if (othrHigh > 0) {
                             changeUI('#ls-othr-High-Quan', 1, 'text', othrHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-othr-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-othr-Lock-Down').click(() => {
@@ -2439,7 +2468,7 @@ function scanArea(manual) {
                         }
                         if (othrLow > 0) {
                             changeUI('#ls-othr-Low-Quan', 1, 'text', othrLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-othr-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-othr-Lock-Up').click(() => {
@@ -2480,7 +2509,7 @@ function scanArea(manual) {
                         }
                         if (plrHigh > 0) {
                             changeUI('#ls-Plr-High-Quan', 1, 'text', plrHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Plr-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-Plr-Lock-Down').click(() => {
@@ -2498,7 +2527,7 @@ function scanArea(manual) {
                         }
                         if (plrLow > 0) {
                             changeUI('#ls-Plr-Low-Quan', 1, 'text', plrLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Plr-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-Plr-Lock-Up').click(() => {
@@ -2539,7 +2568,7 @@ function scanArea(manual) {
                         }
                         if (pvtHigh > 0) {
                             changeUI('#ls-Pvt-High-Quan', 1, 'text', pvtHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Pvt-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-Pvt-Lock-Down').click(() => {
@@ -2557,7 +2586,7 @@ function scanArea(manual) {
                         }
                         if (pvtLow > 0) {
                             changeUI('#ls-Pvt-Low-Quan', 1, 'text', pvtLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Pvt-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-Pvt-Lock-Up').click(() => {
@@ -2598,7 +2627,7 @@ function scanArea(manual) {
                         }
                         if (railHigh > 0) {
                             changeUI('#ls-Rail-High-Quan', 1, 'text', railHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Rail-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-Rail-Lock-Down').click(() => {
@@ -2616,7 +2645,7 @@ function scanArea(manual) {
                         }
                         if (railLow > 0) {
                             changeUI('#ls-Rail-Low-Quan', 1, 'text', railLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Rail-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-Rail-Lock-Up').click(() => {
