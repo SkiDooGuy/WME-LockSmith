@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2023.03.16.00
+// @version      2023.08.26.00
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @match        https://www.waze.com/editor*
@@ -606,7 +606,7 @@ function initLocksmith() {
     ].join(' '));
     // Attach HTML for tab to webpage
     UpdateObj = require('Waze/Action/UpdateObject');
-    cakeFlavor = editorInfo.rank;
+    cakeFlavor = editorInfo.attributes.rank;
     roadClear = cakeFlavor >= FEATURELOCK;
 
     // Script is initialized and the highlighting layer is created
@@ -1086,6 +1086,29 @@ function setUIText() {
     $('#ls-Add-Att-Info').attr('data-original-title', strings.attrTooltip);
 }
 
+function getstatesAvailable() {
+    const allstates = W.model.states.getObjectArray();
+    const filtered = []
+
+    if (allstates) {
+        if (allstates.length > 1) {
+            for( var i = 0; i < allstates.length; i++){
+                if (!allstates[i].isInBbox) continue;
+                try {
+                    var test = _allStandardsArray[W.model.countries.getObjectById(allstates[i].attributes.countryID).attributes.name].States[allstates[i].attributes.name];
+                    filtered.push(allstates[i])
+                }
+                catch {
+                    //    console.log('skipping: ' + allstates[i].name);
+                }
+            }
+        } else {
+            filtered.push(allstates[0])
+        }
+    }
+    return filtered;
+}
+
 function getCurrentState() {
     const overrideEnable = getId('lsManualStateOverride').checked;
     const disablePopup = getId('lsDisableStatePopup').checked;
@@ -1093,7 +1116,7 @@ function getCurrentState() {
     let attempts = 0;
 
     function stateModelStatus() {
-        const statesAvailable = W.model.states.getObjectArray();
+        const statesAvailable = getstatesAvailable();
 
         if (statesAvailable) {
             // Verify the number of states currently available and either prompt for manual selection or set standards based on that state
@@ -1103,10 +1126,10 @@ function getCurrentState() {
                     $('#ls-Current-State-Display').text('Multiple');
                 } else statusOk = true;
             } else if (statesAvailable.length === 1 && !overrideEnable) {
-                const stateName = statesAvailable[0].name === '' ? 'default' : statesAvailable[0].name;
+                const stateName = statesAvailable[0].attributes.name === '' ? 'default' : statesAvailable[0].attributes.name;
                 if (_currentState !== stateName) {
                     _currentState = stateName;
-                    const displayText = _currentState === 'default' ? W.model.getTopCountry().name : _currentState;
+                    const displayText = _currentState === 'default' ? W.model.getTopCountry().attributes.name : _currentState;
                     $('#ls-Current-State-Display').text(displayText);
                     setCurrentStandards(_currentState);
                     statusOk = true;
@@ -1121,7 +1144,7 @@ function getCurrentState() {
 
 function checkCountry() {
     try {
-        country = W.model.getTopCountry().name;
+        country = W.model.getTopCountry().attributes.name;
     } catch (err) {
         country = null;
         // console.log(err);
@@ -1131,7 +1154,7 @@ function checkCountry() {
 function generateStateList() {
     const stateSelector = getId('ls-State-Selection');
     const currOptionsLength = stateSelector.childNodes.length;
-    const statesAvailable = W.model.states.getObjectArray();
+    const statesAvailable = getstatesAvailable();
 
     // Removes any options currently attached to the select
     if (currOptionsLength > 0) {
@@ -1142,7 +1165,7 @@ function generateStateList() {
 
     // Adds available states to the user select
     for (let i = 0; i < statesAvailable.length; i++) {
-        const currStateName = statesAvailable[i].name;
+        const currStateName = statesAvailable[i].attributes.name;
         const newStateOption = document.createElement('option');
         const stateNameText = document.createTextNode(currStateName);
         if (i === 0) {
@@ -1162,9 +1185,9 @@ function setCurrentStandards(stateName) {
     function applyStandards() {
         if (W.model.states.getObjectArray().length > 0) {
             _.each(W.model.states.getObjectArray(), s => {
-                const modelName = s.name === '' ? 'default' : s.name;
+                const modelName = s.attributes.name === '' ? 'default' : s.attributes.name;
                 if (modelName === stateName) {
-                    countryName = s.countryID === 0 ? W.model.getTopCountry().name : W.model.countries.getObjectById(s.countryID).name;
+                    countryName = s.attributes.countryID === 0 ? W.model.getTopCountry().attributes.name : W.model.countries.getObjectById(s.attributes.countryID).attributes.name;
                     if (countryName !== null) {
                         proceed = true;
                         _currentStateStandards = _allStandardsArray[countryName].States[stateName];
@@ -1387,9 +1410,9 @@ function processSegment(seg) {
         // Gather/verify info attached to segment
         const priSt = W.model.streets.getObjectById(segAtt.primaryStreetID);
         if (priSt == null) return;
-        const cityObj = W.model.cities.getObjectById(priSt.cityID);
+        const cityObj = W.model.cities.getObjectById(priSt.attributes.cityID);
         const cityName = cityObj.attributes.name;
-        const segStateName = W.model.states.getObjectById(cityObj.attributes.stateID).name === '' ? 'default' : W.model.states.getObjectById(cityObj.attributes.stateID).name;
+        const segStateName = W.model.states.getObjectById(cityObj.attributes.stateID).attributes.name === '' ? 'default' : W.model.states.getObjectById(cityObj.attributes.stateID).attributes.name;
         // Setup object to verify certain segment attributes
         const conditions = {
             isOneWay: false,
