@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2023.08.26.00
+// @version      2023.09.26.00
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @match        https://www.waze.com/editor*
@@ -139,7 +139,7 @@ const css = [
 ].join(' ');
 
 function Locksmithbootstrap() {
-    if (W && W.map && W.model && W.model.countries && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
+    if (typeof W === 'object' && W.userscripts?.state?.isReady && W.map && W.model && W.model.countries && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
         checkCountry();
         if (country === null) {
             setTimeout(function () {
