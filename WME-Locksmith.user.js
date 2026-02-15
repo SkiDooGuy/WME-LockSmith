@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2023.09.26.00
+// @version      2026.02.16.00
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @match        https://www.waze.com/editor*
@@ -10,8 +10,9 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
+// @require          https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
 // @require      https://apis.google.com/js/api.js
-// @grant        none
+// @grant        unsafeWindow
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // ==/UserScript==
 
@@ -19,13 +20,15 @@
 /* global WazeWrap */
 /* global $ */
 /* global OpenLayers */
+/* global turf */
 /* global _ */
 /* global require */
 
 const LOCKSMITH_VERSION = `v${GM_info.script.version}`;
+const SCRIPT_NAME = GM_info.script.name;
 const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
-- Allowed for "Current Standards" string to be translated<br><br>
+- Converted to SDK<br><br>
 <b>FIXES:</b><br>
 - <br><br>`;
 const TRANSLATIONS = {
@@ -138,8 +141,18 @@ const css = [
     '#lsConnectionStatus {display:inline;position:relative;height:15px;width:30px;border:1px solid lightgrey;border-radius:4px;font-size:8px;text-align:center;font-weight:bold;top:-2px;left:2px;line-height:1.5;}'
 ].join(' ');
 
+    let sdk;
+    unsafeWindow.SDK_INITIALIZED.then(() => {
+        if (!unsafeWindow.getWmeSdk) {
+            throw new Error("SDK is not installed");
+        }
+        sdk = unsafeWindow.getWmeSdk({ scriptId: "wme-locksmsith-sdk", scriptName: SCRIPT_NAME });
+        console.log(`SDK v ${sdk.getSDKVersion()} on ${sdk.getWMEVersion()} initialized`);
+        sdk.Events.once({ eventName: "wme-ready" }).then(Locksmithbootstrap); //let wme and SDK get loaded, then continue with script
+    });
+
 function Locksmithbootstrap() {
-    if (typeof W === 'object' && W.userscripts?.state?.isReady && W.map && W.model && W.model.countries && W.model.states && W.loginManager.user && $ && WazeWrap.Ready) {
+    if (WazeWrap.Ready) {
         checkCountry();
         if (country === null) {
             setTimeout(function () {
@@ -157,7 +170,7 @@ function Locksmithbootstrap() {
 }
 
 function initLocksmith() {
-    editorInfo = W.loginManager.user;
+    editorInfo = sdk.State.getUserInfo().userName; // get username
 
     const $section = $('<div>');
     // HTML for UI tab
@@ -165,10 +178,10 @@ function initLocksmith() {
         '<div class="ls-Wrapper">',
         '<div class="ls-Body">',
         `<div class="ls-Header-Wrapper">
-                    <div class="ls-Header-Text-Container">
-                        <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}
-                        <a href='https://docs.google.com/spreadsheets/d/1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}'></a>
-                    </div>
+                     <div class="ls-Header-Text-Container">
+                         <span class='key-Text'>Locksmith</span> - ${LOCKSMITH_VERSION}
+                         <a href='https://docs.google.com/spreadsheets/d/1z9WQW_6xdXDn9nz_087DoZby2XxcDSxxRbby_y1tKho/edit#gid=0' target="_blank" id='lsConnectionStatus' data-original-title='${TRANSLATIONS[langLocality].colTooltip}'></a>
+                     </div>
                     <div class="ls-Options-Container" style="display:block;height:35px;padding:2px 10px 0 10px;width:100%">
                         <div style="display:inline-block;float:left;position:relative;width:60%;">
                             <div class="ls-Options-Container" style="margin:3px 0 0 0;">
@@ -256,9 +269,12 @@ function initLocksmith() {
                         <div class="ls-Section-Container" id="ls-Seg-Types-Main">
                             <div class="ls-Lock-Options">
                                 <select class="ls-Select" id="lsLockStreetSelect">
-                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option><option class="ls-Lock-Option-1">1</option>
-                                    <option class="ls-Lock-Option-2">2</option><option class="ls-Lock-Option-3">3</option>
-                                    <option class="ls-Lock-Option-4">4</option><option class="ls-Lock-Option-5">5</option>
+                                    <option class="ls-Lock-Option-0">${TRANSLATIONS.default.option0}</option>
+                                    <option class="ls-Lock-Option-1">1</option>
+                                    <option class="ls-Lock-Option-2">2</option>
+                                    <option class="ls-Lock-Option-3">3</option>
+                                    <option class="ls-Lock-Option-4">4</option>
+                                    <option class="ls-Lock-Option-5">5</option>
                                     <option class="ls-Lock-Option-6">6</option>
                                 </select>
                                 <span class="ls-LS-Label"></span>
@@ -606,18 +622,28 @@ function initLocksmith() {
     ].join(' '));
     // Attach HTML for tab to webpage
     UpdateObj = require('Waze/Action/UpdateObject');
-    cakeFlavor = editorInfo.attributes.rank;
+    cakeFlavor = sdk.State.getUserInfo().rank;
     roadClear = cakeFlavor >= FEATURELOCK;
 
     // Script is initialized and the highlighting layer is created
-    WazeWrap.Interface.Tab('LS', $section.html(), initializeSettings, 'LS');
+    sdk.Sidebar.registerScriptTab().then((r) => {
+        r.tabLabel.innerHTML = "LockSmith";
+        r.tabPane.innerHTML = $section.html();
+        initializeSettings();
+    });
 
     WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith', 'https://www.waze.com/forum/viewtopic.php?f=819&t=285583');
 
     LocksmithHighlightLayer = new OpenLayers.Layer.Vector('LocksmithHighlightLayer', { uniqueName: '_LocksmithHighlightLayer' });
-    W.map.addLayer(LocksmithHighlightLayer);
-    LocksmithHighlightLayer.setVisibility(true);
-
+    sdk.Map.addLayer({
+        layerName: LocksmithHighlightLayer.name,
+        zIndexing: true,
+        });
+        sdk.LayerSwitcher.addLayerCheckbox(LocksmithHighlightLayer);
+        sdk.Map.setLayerVisibility({
+            layerName: LocksmithHighlightLayer.name,
+            visibility: LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable,
+        });
     console.log('LS: loaded');
 }
 
@@ -727,13 +753,13 @@ async function initializeSettings() {
     });
 
     // Register WME event listeners
-    W.map.events.register('moveend', null, tryScan);
-    W.map.events.register('movestart', null, resetUISegStats);
-    W.model.actionManager.events.register('afteraction', null, tryScan);
-    W.model.actionManager.events.register('afterundoaction', null, tryScan);
-    W.model.actionManager.events.register('afterclearactions', null, tryScan);
-    W.model.actionManager.events.register('afterclearactions', null, resetUISegStats);
-    W.accelerators.events.register('editHouseNumbers', null, tryScan);
+    sdk.Events.on({ eventName: "wme-map-move-end", eventHandler: tryScan });
+    sdk.Events.on({ eventName: "wme-map-move", eventHandler: resetUISegStats });
+    sdk.Events.on({ eventName: "wme-after-edit", eventHandler: tryScan });
+    sdk.Events.on({ eventName: "wme-after-undo", eventHandler: tryScan });
+    sdk.Events.on({ eventName: "wme-after-redo-clear", eventHandler: tryScan });
+    sdk.Events.on({ eventName: "wme-after-redo-clear", eventHandler: resetUISegStats });
+
 
     function setUserOptions() {
         // Checks editors rank and hides lock options above them
@@ -1087,15 +1113,15 @@ function setUIText() {
 }
 
 function getstatesAvailable() {
-    const allstates = W.model.states.getObjectArray();
+    const allstates = sdk.DataModel.States.getAll()
     const filtered = []
 
     if (allstates) {
         if (allstates.length > 1) {
             for( var i = 0; i < allstates.length; i++){
-                if (!allstates[i].isInBbox) continue;
+                if (!allstates[i]) continue;
                 try {
-                    var test = _allStandardsArray[W.model.countries.getObjectById(allstates[i].attributes.countryID).attributes.name].States[allstates[i].attributes.name];
+                    var test = _allStandardsArray[sdk.DataModel.Countries.getById({ countryId: allstates[i].countryID })?.name || sdk.DataModel.Countries.getTopCountry().name].States[allstates[i].name];
                     filtered.push(allstates[i])
                 }
                 catch {
@@ -1126,10 +1152,10 @@ function getCurrentState() {
                     $('#ls-Current-State-Display').text('Multiple');
                 } else statusOk = true;
             } else if (statesAvailable.length === 1 && !overrideEnable) {
-                const stateName = statesAvailable[0].attributes.name === '' ? 'default' : statesAvailable[0].attributes.name;
+                const stateName = statesAvailable[0].name === '' ? 'default' : statesAvailable[0].name;
                 if (_currentState !== stateName) {
                     _currentState = stateName;
-                    const displayText = _currentState === 'default' ? W.model.getTopCountry().attributes.name : _currentState;
+                    const displayText = _currentState === 'default' ? sdk.DataModel.Countries.getTopCountry().name : _currentState;
                     $('#ls-Current-State-Display').text(displayText);
                     setCurrentStandards(_currentState);
                     statusOk = true;
@@ -1144,7 +1170,7 @@ function getCurrentState() {
 
 function checkCountry() {
     try {
-        country = W.model.getTopCountry().attributes.name;
+        country = sdk.DataModel.Countries.getTopCountry().name;
     } catch (err) {
         country = null;
         // console.log(err);
@@ -1165,7 +1191,7 @@ function generateStateList() {
 
     // Adds available states to the user select
     for (let i = 0; i < statesAvailable.length; i++) {
-        const currStateName = statesAvailable[i].attributes.name;
+        const currStateName = statesAvailable[i].name;
         const newStateOption = document.createElement('option');
         const stateNameText = document.createTextNode(currStateName);
         if (i === 0) {
@@ -1183,11 +1209,13 @@ function setCurrentStandards(stateName) {
     let countryName;
     // Sets the locking standards based on the state and updates relevent UI components
     function applyStandards() {
-        if (W.model.states.getObjectArray().length > 0) {
-            _.each(W.model.states.getObjectArray(), s => {
-                const modelName = s.attributes.name === '' ? 'default' : s.attributes.name;
+       if (sdk.DataModel.States.getAll().length > 0) {
+            sdk.DataModel.States.getAll().forEach(s => {
+                const modelName = s.name === '' ? 'default' : s.name;
                 if (modelName === stateName) {
-                    countryName = s.attributes.countryID === 0 ? W.model.getTopCountry().attributes.name : W.model.countries.getObjectById(s.attributes.countryID).attributes.name;
+
+// NEED TO FIX ONCE YOU CAN GET A COUNTRY ID FROM THE STATE MODEL
+                    countryName = s.countryID === 0 ? sdk.DataModel.Countries.getTopCountry().name : sdk.DataModel.Countries.getById({ countryId: sdk.DataModel.Cities.getAll()[0].countryId}).name;
                     if (countryName !== null) {
                         proceed = true;
                         _currentStateStandards = _allStandardsArray[countryName].States[stateName];
@@ -1280,7 +1308,8 @@ function getId(iD) {
 
 function onScreen(obj) {
     if (obj.geometry) {
-        return (W.map.getExtent().intersectsBounds(obj.geometry.getBounds()));
+        const bbPoly = turf.bboxPolygon(sdk.Map.getMapExtent());
+        return turf.booleanIntersects(obj.geometry,bbPoly);
     }
     return false;
 }
@@ -1292,10 +1321,13 @@ function removeHighlights() {
 function processLocks(seg, currLockRnk, stdLockRnk) {
     // Process lock action
     if (stdLockRnk > cakeFlavor) stdLockRnk = cakeFlavor;
-    if (((currLockRnk < stdLockRnk) || (currLockRnk == null && stdLockRnk != null) ||
+        if (((currLockRnk < stdLockRnk) || (currLockRnk == null && stdLockRnk != null) ||
             ((currLockRnk > stdLockRnk) && (currLockRnk <= cakeFlavor))) &&
-        seg.isGeometryEditable() && seg.attributes.hasClosures === false) {
-        W.model.actionManager.add(new UpdateObj(seg, { lockRank: stdLockRnk }));
+             sdk.DataModel.Segments.hasPermissions({ segmentId: seg.id }) && seg.hasClosures === false) {
+    sdk.DataModel.Segments.updateSegment({
+    segmentId: seg.id, // The ID of the segment you want to update
+    lockRank: stdLockRnk // The new lock rank value (UserRank)
+});
         return true;
     }
     return false;
@@ -1304,36 +1336,33 @@ function processLocks(seg, currLockRnk, stdLockRnk) {
 function getSegmentConditions(seg, conditions) {
     // Determine segment attributes for locking exceptions
     const restrictions = seg.restrictions;
-    if ((seg.fwdDirection === false && seg.revDirection === true) || (seg.fwdDirection === true && seg.revDirection === false)) conditions.isOneWay = true;
-    if (seg.fwdToll === true || seg.revToll === true) conditions.isTollRoad = true;
+    if ((seg.isAtoB === false && seg.isBtoA === true) || (seg.isAtoB === true && seg.isBtoA === false)) conditions.isOneWay = true;
+    if (sdk.DataModel.Segments.isTollSegment({ segmentId: seg.id }) === true) conditions.isTollRoad = true;
     if (restrictions.length > 0) {
         for (let i = 0; i < restrictions.length; i++) {
             if (restrictions[i]._defaultType === 'TOLL') conditions.isTollRoad = true;
         }
     }
-    if (seg.flags === 16) conditions.isUnpaved = true;
+    if (seg.flagAttributes.unpaved === true) conditions.isUnpaved = true;
     return conditions;
 }
 
 function getHighestLock(segID) {
-    const segObj = W.model.segments.getObjectById(segID);
-    const segType = segObj.attributes.roadType;
+    const segObj = sdk.DataModel.Segments.getById({ segmentId: segID })
+    const segType = segObj.roadType
     const checkedSegs = [];
     let forwardLock = null;
     let reverseLock = null;
-
     function processForNode(forwardID) {
         checkedSegs.push(forwardID);
-        const forNode = W.model.segments.getObjectById(forwardID).getToNode();
-        const forNodeSegs = [...forNode.attributes.segIDs];
+        const forNode = sdk.DataModel.Nodes.getById({ nodeId: segObj.toNodeId });
+        const forNodeSegs = [...forNode.connectedSegmentIds];
 
         for (let j = 0; j < forNodeSegs.length; j++) {
             if (forNodeSegs[j] === forwardID) { forNodeSegs.splice(j, 1); }
         }
-
         for (let i = 0; i < forNodeSegs.length; i++) {
-            const conSeg = W.model.segments.getObjectById(forNodeSegs[i]).attributes;
-
+            const conSeg = sdk.DataModel.Segments.getById({ segmentId: forNodeSegs[i] });
             if (conSeg.roadType !== segType) {
                 forwardLock = Math.max(conSeg.lockRank, forwardLock);
             } else {
@@ -1347,18 +1376,16 @@ function getHighestLock(segID) {
         }
         return forwardLock;
     }
-
     function processRevNode(reverseID) {
         checkedSegs.push(reverseID);
-        const revNode = W.model.segments.getObjectById(reverseID).getFromNode();
-        const revNodeSegs = [...revNode.attributes.segIDs];
+        const revNode = sdk.DataModel.Nodes.getById({ nodeId: segObj.fromNodeId });
+        const revNodeSegs = [...revNode.connectedSegmentIds];
 
         for (let j = 0; j < revNodeSegs.length; j++) {
             if (revNodeSegs[j] === reverseID) { revNodeSegs.splice(j, 1); }
         }
-
         for (let i = 0; i < revNodeSegs.length; i++) {
-            const conSeg = W.model.segments.getObjectById(revNodeSegs[i]).attributes;
+            const conSeg = sdk.DataModel.Segments.getById({ segmentId: revNodeSegs[i] });
 
             if (conSeg.roadType !== segType) {
                 reverseLock = Math.max(conSeg.lockRank, reverseLock);
@@ -1378,7 +1405,7 @@ function getHighestLock(segID) {
 }
 
 function processSegment(seg) {
-    const segAtt = seg.attributes;
+    const segAtt = seg;
     const segType = segAtt.roadType;
     let lockUpdateLvl = null;
     let enUpdate = false;
@@ -1408,11 +1435,11 @@ function processSegment(seg) {
     let segStatus = seg.state == null ? 'good' : seg.state;
     if (segStatus.toLowerCase() !== 'insert' && segStatus.toLowerCase() !== 'delete') {
         // Gather/verify info attached to segment
-        const priSt = W.model.streets.getObjectById(segAtt.primaryStreetID);
+        const priSt = sdk.DataModel.Streets.getById({ streetId: segAtt.primaryStreetId});
         if (priSt == null) return;
-        const cityObj = W.model.cities.getObjectById(priSt.attributes.cityID);
-        const cityName = cityObj.attributes.name;
-        const segStateName = W.model.states.getObjectById(cityObj.attributes.stateID).attributes.name === '' ? 'default' : W.model.states.getObjectById(cityObj.attributes.stateID).attributes.name;
+        const cityObj = sdk.DataModel.Cities.getById({ cityId: priSt.cityId});
+        const cityName = cityObj.name;
+        const segStateName = sdk.DataModel.States.getById( {stateId: cityObj.stateId } ).name === '' ? 'default' : sdk.DataModel.States.getById( {stateId: cityObj.stateId } ).name;
         // Setup object to verify certain segment attributes
         const conditions = {
             isOneWay: false,
@@ -1464,8 +1491,7 @@ function processSegment(seg) {
             tollLock: tempLocks.Toll != null ? tempLocks.Toll - 1 : null,
             unpavedLock: tempLocks.Unpaved != null
         };
-
-        if (seg.type === 'segment' && onScreen(seg) && (segStateName === _currentState)) {
+        if (onScreen(seg) && (segStateName === _currentState)) {
             getSegmentConditions(segAtt, conditions);
 
             // Process local streets
@@ -1597,10 +1623,9 @@ function processSegment(seg) {
 function relockAll() {
     let count = 0;
     const resetHigher = getId('lsEnableResetHigher').checked;
-
     if (getCurrentState()) {
-        _.each(W.model.segments.getObjectArray(), v => {
-            const segAtt = v.attributes;
+        _.each(sdk.DataModel.Segments.getAll(), v => {
+            const segAtt = v;
             const currLockRnk = segAtt.lockRank;
             let updateSuccess;
 
@@ -1621,6 +1646,7 @@ function relockAll() {
 }
 
 function tryScan() {
+//  I believe that this is no longer needed since HN mode is deprecated.   NEEDs TO BE CONVERTED SDK MAYBE
     if (!W.editingMediator.attributes.editingHouseNumbers && getId('lsEnableActiveScan').checked) scanArea(false);
 }
 
@@ -1645,8 +1671,7 @@ function scanArea(manual) {
                 strokeOpacity: 0.5
             };
             if (errorType === 'high') { style.strokeColor = 'cyan'; } else { style.strokeColor = 'red'; }
-
-            const geo = segGeo.clone();
+            const geo = structuredClone(segGeo.geometry)
             const feature = new OpenLayers.Feature.Vector(geo, {}, style);
             LocksmithHighlightLayer.addFeatures([feature]);
         }
@@ -1676,20 +1701,20 @@ function scanArea(manual) {
         const ignoreHigher = getId('lsEnableIgnoreRank').checked;
 
         // Count how many segments need a corrected lock (limit to 150 to save CPU), accounts for the users editor level
-        _.each(W.model.segments.getObjectArray(), v => {
-            if (numWrongLocks < 150 && v.type === 'segment' && onScreen(v)) {
+        _.each(sdk.DataModel.Segments.getAll(), v => {
+            if (numWrongLocks < 150 && onScreen(v)) {
                 const correctLockRank = processSegment(v);
 
                 if (correctLockRank !== false) {
-                    const segGeo = v.geometry;
-                    const segType = v.attributes.roadType;
-                    const segLockRank = v.attributes.lockRank;
+                    const segGeo = v;
+                    const segType = v.roadType;
+                    const segLockRank = v.lockRank;
 
                     // LS
                     if (segType === 1) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.ls.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1700,7 +1725,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.ls.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1714,7 +1739,7 @@ function scanArea(manual) {
                     if (segType === 2) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.ps.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1725,7 +1750,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.ps.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1739,7 +1764,7 @@ function scanArea(manual) {
                     if (segType === 3) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.fwy.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1750,7 +1775,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.fwy.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1764,7 +1789,7 @@ function scanArea(manual) {
                     if (segType === 4) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.rmp.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1775,7 +1800,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.rmp.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1789,7 +1814,7 @@ function scanArea(manual) {
                     if (segType === 6) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.mah.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1800,7 +1825,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.mah.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1814,7 +1839,7 @@ function scanArea(manual) {
                     if (segType === 7) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.mih.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1825,7 +1850,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.mih.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1839,7 +1864,7 @@ function scanArea(manual) {
                     if (segType === 8) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.ofrd.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1850,7 +1875,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.ofrd.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1864,7 +1889,7 @@ function scanArea(manual) {
                     if (segType === 10) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.nrpd.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1875,7 +1900,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.nrpd.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1889,7 +1914,7 @@ function scanArea(manual) {
                     if (segType === 15) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.fry.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1900,7 +1925,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.fry.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1914,7 +1939,7 @@ function scanArea(manual) {
                     if (segType === 17) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.pvt.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1925,7 +1950,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.pvt.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1939,7 +1964,7 @@ function scanArea(manual) {
                     if (segType === 18) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.rail.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1950,7 +1975,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.rail.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1964,7 +1989,7 @@ function scanArea(manual) {
                     if (segType === 19) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.rnwy.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -1975,7 +2000,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.rnwy.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -1989,7 +2014,7 @@ function scanArea(manual) {
                     if (segType === 20) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.plr.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -2000,7 +2025,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.plr.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -2014,7 +2039,7 @@ function scanArea(manual) {
                     if (segType === 8 || segType === 10 || segType === 15 || segType === 17 || segType === 18 || segType === 19 || segType === 20) {
                         if (resetHigher && segLockRank > correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.othr.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'high'
@@ -2025,7 +2050,7 @@ function scanArea(manual) {
                         }
                         if (segLockRank < correctLockRank && (editorSufficientRank(segLockRank, correctLockRank) || ignoreHigher)) {
                             badLockSegs.othr.push({
-                                segID: v.attributes.id,
+                                segID: v.id,
                                 currLockRnk: segLockRank,
                                 stdLockRnk: correctLockRank,
                                 lockError: 'low'
@@ -2082,7 +2107,7 @@ function scanArea(manual) {
                             $('#icon-Lock-LS').click(() => {
                                 for (let i = 0; i < badLockSegs.ls.length; i++) {
                                     const aryData = badLockSegs.ls[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-LS', 0, 'lock', null);
@@ -2094,13 +2119,13 @@ function scanArea(manual) {
                         }
                         if (lsHigh > 0) {
                             changeUI('#ls-LS-High-Quan', 1, 'text', lsHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-LS-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-LS-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.ls.length; i++) {
                                         const aryData = badLockSegs.ls[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-LS-Lock-Down', 0, 'lock', null);
@@ -2118,7 +2143,7 @@ function scanArea(manual) {
                                 $('#ls-LS-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.ls.length; i++) {
                                         const aryData = badLockSegs.ls[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-LS-Lock-Up', 0, 'lock', null);
@@ -2141,7 +2166,7 @@ function scanArea(manual) {
                             $('#icon-Lock-PS').click(() => {
                                 for (let i = 0; i < badLockSegs.ps.length; i++) {
                                     const aryData = badLockSegs.ps[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-PS', 0, 'lock', null);
@@ -2159,7 +2184,7 @@ function scanArea(manual) {
                                 $('#ls-PS-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.ps.length; i++) {
                                         const aryData = badLockSegs.ps[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-PS-Lock-Down', 0, 'lock', null);
@@ -2177,7 +2202,7 @@ function scanArea(manual) {
                                 $('#ls-PS-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.ps.length; i++) {
                                         const aryData = badLockSegs.ps[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-PS-Lock-Up', 0, 'lock', null);
@@ -2200,7 +2225,7 @@ function scanArea(manual) {
                             $('#icon-Lock-minH').click(() => {
                                 for (let i = 0; i < badLockSegs.mih.length; i++) {
                                     const aryData = badLockSegs.mih[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-minH', 0, 'lock', null);
@@ -2218,7 +2243,7 @@ function scanArea(manual) {
                                 $('#ls-minH-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.mih.length; i++) {
                                         const aryData = badLockSegs.mih[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-minH-Lock-Down', 0, 'lock', null);
@@ -2236,7 +2261,7 @@ function scanArea(manual) {
                                 $('#ls-minH-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.mih.length; i++) {
                                         const aryData = badLockSegs.mih[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-minH-Lock-Up', 0, 'lock', null);
@@ -2259,7 +2284,7 @@ function scanArea(manual) {
                             $('#icon-Lock-majH').click(() => {
                                 for (let i = 0; i < badLockSegs.mah.length; i++) {
                                     const aryData = badLockSegs.mah[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)})
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-majH', 0, 'lock', null);
@@ -2277,7 +2302,7 @@ function scanArea(manual) {
                                 $('#ls-majH-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.mah.length; i++) {
                                         const aryData = badLockSegs.mah[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-majH-Lock-Down', 0, 'lock', null);
@@ -2295,7 +2320,7 @@ function scanArea(manual) {
                                 $('#ls-majH-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.mah.length; i++) {
                                         const aryData = badLockSegs.mah[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-majH-Lock-Up', 0, 'lock', null);
@@ -2318,7 +2343,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Rmp').click(() => {
                                 for (let i = 0; i < badLockSegs.rmp.length; i++) {
                                     const aryData = badLockSegs.rmp[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Rmp', 0, 'lock', null);
@@ -2336,7 +2361,7 @@ function scanArea(manual) {
                                 $('#ls-Rmp-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.rmp.length; i++) {
                                         const aryData = badLockSegs.rmp[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+//                                        const seg = W.model.segments.getObjectById(aryData.segID);
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Rmp-Lock-Down', 0, 'lock', null);
@@ -2354,7 +2379,7 @@ function scanArea(manual) {
                                 $('#ls-Rmp-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.rmp.length; i++) {
                                         const aryData = badLockSegs.rmp[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Rmp-Lock-Up', 0, 'lock', null);
@@ -2377,7 +2402,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Fwy').click(() => {
                                 for (let i = 0; i < badLockSegs.fwy.length; i++) {
                                     const aryData = badLockSegs.fwy[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Fwy', 0, 'lock', null);
@@ -2395,7 +2420,7 @@ function scanArea(manual) {
                                 $('#ls-Fwy-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.fwy.length; i++) {
                                         const aryData = badLockSegs.fwy[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Fwy-Lock-Down', 0, 'lock', null);
@@ -2413,7 +2438,7 @@ function scanArea(manual) {
                                 $('#ls-Fwy-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.fwy.length; i++) {
                                         const aryData = badLockSegs.fwy[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Fwy-Lock-Up', 0, 'lock', null);
@@ -2436,7 +2461,7 @@ function scanArea(manual) {
                             $('#icon-Lock-othr').click(() => {
                                 for (let i = 0; i < badLockSegs.othr.length; i++) {
                                     const aryData = badLockSegs.othr[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-othr', 0, 'lock', null);
@@ -2448,13 +2473,13 @@ function scanArea(manual) {
                         }
                         if (othrHigh > 0) {
                             changeUI('#ls-othr-High-Quan', 1, 'text', othrHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-othr-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-othr-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.othr.length; i++) {
                                         const aryData = badLockSegs.othr[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-othr-Lock-Down', 0, 'lock', null);
@@ -2466,13 +2491,13 @@ function scanArea(manual) {
                         }
                         if (othrLow > 0) {
                             changeUI('#ls-othr-Low-Quan', 1, 'text', othrLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-othr-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-othr-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.othr.length; i++) {
                                         const aryData = badLockSegs.othr[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-othr-Lock-Up', 0, 'lock', null);
@@ -2495,7 +2520,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Plr').click(() => {
                                 for (let i = 0; i < badLockSegs.plr.length; i++) {
                                     const aryData = badLockSegs.plr[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Plr', 0, 'lock', null);
@@ -2507,13 +2532,13 @@ function scanArea(manual) {
                         }
                         if (plrHigh > 0) {
                             changeUI('#ls-Plr-High-Quan', 1, 'text', plrHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Plr-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-Plr-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.plr.length; i++) {
                                         const aryData = badLockSegs.plr[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Plr-Lock-Down', 0, 'lock', null);
@@ -2525,13 +2550,13 @@ function scanArea(manual) {
                         }
                         if (plrLow > 0) {
                             changeUI('#ls-Plr-Low-Quan', 1, 'text', plrLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Plr-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-Plr-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.plr.length; i++) {
                                         const aryData = badLockSegs.plr[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Plr-Lock-Up', 0, 'lock', null);
@@ -2554,7 +2579,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Pvt').click(() => {
                                 for (let i = 0; i < badLockSegs.pvt.length; i++) {
                                     const aryData = badLockSegs.pvt[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Pvt', 0, 'lock', null);
@@ -2566,13 +2591,13 @@ function scanArea(manual) {
                         }
                         if (pvtHigh > 0) {
                             changeUI('#ls-Pvt-High-Quan', 1, 'text', pvtHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Pvt-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-Pvt-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.pvt.length; i++) {
                                         const aryData = badLockSegs.pvt[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Pvt-Lock-Down', 0, 'lock', null);
@@ -2584,13 +2609,13 @@ function scanArea(manual) {
                         }
                         if (pvtLow > 0) {
                             changeUI('#ls-Pvt-Low-Quan', 1, 'text', pvtLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Pvt-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-Pvt-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.pvt.length; i++) {
                                         const aryData = badLockSegs.pvt[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Pvt-Lock-Up', 0, 'lock', null);
@@ -2613,7 +2638,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Rail').click(() => {
                                 for (let i = 0; i < badLockSegs.rail.length; i++) {
                                     const aryData = badLockSegs.rail[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Rail', 0, 'lock', null);
@@ -2625,13 +2650,13 @@ function scanArea(manual) {
                         }
                         if (railHigh > 0) {
                             changeUI('#ls-Rail-High-Quan', 1, 'text', railHigh);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Rail-Lock-Down', 1, 'lock', 'high');
                                 $('#ls-Rail-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.rail.length; i++) {
                                         const aryData = badLockSegs.rail[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Rail-Lock-Down', 0, 'lock', null);
@@ -2643,13 +2668,13 @@ function scanArea(manual) {
                         }
                         if (railLow > 0) {
                             changeUI('#ls-Rail-Low-Quan', 1, 'text', railLow);
-                            
+
                             if (roadClear) {
                                 changeUI('#ls-Rail-Lock-Up', 1, 'lock', 'low');
                                 $('#ls-Rail-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.rail.length; i++) {
                                         const aryData = badLockSegs.rail[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Rail-Lock-Up', 0, 'lock', null);
@@ -2672,7 +2697,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Fry').click(() => {
                                 for (let i = 0; i < badLockSegs.fry.length; i++) {
                                     const aryData = badLockSegs.fry[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Fry', 0, 'lock', null);
@@ -2690,7 +2715,7 @@ function scanArea(manual) {
                                 $('#ls-Fry-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.fry.length; i++) {
                                         const aryData = badLockSegs.fry[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Fry-Lock-Down', 0, 'lock', null);
@@ -2708,7 +2733,7 @@ function scanArea(manual) {
                                 $('#ls-Fry-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.fry.length; i++) {
                                         const aryData = badLockSegs.fry[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Fry-Lock-Up', 0, 'lock', null);
@@ -2731,7 +2756,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Rnwy').click(() => {
                                 for (let i = 0; i < badLockSegs.rnwy.length; i++) {
                                     const aryData = badLockSegs.rnwy[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Rnwy', 0, 'lock', null);
@@ -2749,7 +2774,7 @@ function scanArea(manual) {
                                 $('#ls-Rnwy-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.rnwy.length; i++) {
                                         const aryData = badLockSegs.rnwy[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Rnwy-Lock-Down', 0, 'lock', null);
@@ -2767,7 +2792,7 @@ function scanArea(manual) {
                                 $('#ls-Rnwy-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.rnwy.length; i++) {
                                         const aryData = badLockSegs.rnwy[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Rnwy-Lock-Up', 0, 'lock', null);
@@ -2790,7 +2815,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Ofrd').click(() => {
                                 for (let i = 0; i < badLockSegs.ofrd.length; i++) {
                                     const aryData = badLockSegs.ofrd[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Ofrd', 0, 'lock', null);
@@ -2808,7 +2833,7 @@ function scanArea(manual) {
                                 $('#ls-Ofrd-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.ofrd.length; i++) {
                                         const aryData = badLockSegs.ofrd[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Ofrd-Lock-Down', 0, 'lock', null);
@@ -2826,7 +2851,7 @@ function scanArea(manual) {
                                 $('#ls-Ofrd-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.ofrd.length; i++) {
                                         const aryData = badLockSegs.ofrd[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Ofrd-Lock-Up', 0, 'lock', null);
@@ -2849,7 +2874,7 @@ function scanArea(manual) {
                             $('#icon-Lock-Nonped').click(() => {
                                 for (let i = 0; i < badLockSegs.nrpd.length; i++) {
                                     const aryData = badLockSegs.nrpd[i];
-                                    const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                     processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                 }
                                 changeUI('#icon-Lock-Nonped', 0, 'lock', null);
@@ -2867,7 +2892,7 @@ function scanArea(manual) {
                                 $('#ls-Nonped-Lock-Down').click(() => {
                                     for (let i = 0; i < badLockSegs.nrpd.length; i++) {
                                         const aryData = badLockSegs.nrpd[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'high') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Nonped-Lock-Down', 0, 'lock', null);
@@ -2885,7 +2910,7 @@ function scanArea(manual) {
                                 $('#ls-Nonped-Lock-Up').click(() => {
                                     for (let i = 0; i < badLockSegs.nrpd.length; i++) {
                                         const aryData = badLockSegs.nrpd[i];
-                                        const seg = W.model.segments.getObjectById(aryData.segID);
+                                    const seg = sdk.DataModel.Segments.getById ({ segmentId: (aryData.segID)});
                                         if (aryData.lockError === 'low') processLocks(seg, aryData.currLockRnk, aryData.stdLockRnk);
                                     }
                                     changeUI('#ls-Nonped-Lock-Up', 0, 'lock', null);
@@ -2907,4 +2932,4 @@ function scanArea(manual) {
     }
 }
 
-Locksmithbootstrap();
+// Locksmithbootstrap();
