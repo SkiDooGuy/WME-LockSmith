@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.02.16.00
+// @version      2026.04.20.001
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
 // @match        https://www.waze.com/editor*
@@ -10,7 +10,7 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @require          https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js
+// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.3.1/turf.min.js
 // @require      https://apis.google.com/js/api.js
 // @grant        unsafeWindow
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
@@ -815,17 +815,17 @@ async function saveSettings() {
 
     if (localStorage) { localStorage.setItem('LsUS_Settings', JSON.stringify(localsettings)); }
     // Attempt to connect to the WazeWrap setting store server
-    const serverSave = await WazeWrap.Remote.SaveSettings('LsUS_Settings', localsettings);
+    // const serverSave = await WazeWrap.Remote.SaveSettings('LsUS_Settings', localsettings);
 
-    if (serverSave === null) console.log('LS: User PIN not set in WazeWrap tab');
-    else if (serverSave === false) console.log('LS: Unable to save settings to server');
+    // if (serverSave === null) console.log('LS: User PIN not set in WazeWrap tab');
+    // else if (serverSave === false) console.log('LS: Unable to save settings to server');
 }
 
 async function loadSettings() {
     const localSettings = $.parseJSON(localStorage.getItem('LsUS_Settings'));
     // Attempt connection to WazeWrap setting server to retrieve settings
-    const serverSettings = await WazeWrap.Remote.RetrieveSettings('LsUS_Settings');
-    if (!serverSettings) console.log('LS: Error communicating with WW settings server');
+    // const serverSettings = await WazeWrap.Remote.RetrieveSettings('LsUS_Settings');
+    // if (!serverSettings) console.log('LS: Error communicating with WW settings server');
     // Default checkbox settings
     const defaultsettings = {
         lastSaveAction: null,
@@ -852,10 +852,10 @@ async function loadSettings() {
     };
 
     LsSettings = $.extend({}, defaultsettings, localSettings);
-    if (serverSettings && serverSettings.lastSaveAction > LsSettings.lastSaveAction) {
-        $.extend(LsSettings, serverSettings);
-        console.log('LS: server settings used');
-    }
+    // if (serverSettings && serverSettings.lastSaveAction > LsSettings.lastSaveAction) {
+    //     $.extend(LsSettings, serverSettings);
+    //     console.log('LS: server settings used');
+    // }
     if (LsSettings.EnableSaveSettings === false) LsSettings = defaultsettings;
     // Sets saved values for segment locks when desired
     if (LsSettings.EnableSaveValues === true) {
