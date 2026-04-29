@@ -86,7 +86,11 @@ let LsSettings = {};
 let _currentState = '';
 let cakeFlavor;
 let roadClear = false;
-let LocksmithHighlightLayer;
+let LocksmithHighlightLayer = {
+    name: '_LocksmithHighlightLayer',
+    highlightsVisible: false,
+    HighlightsEnable: false
+};
 let tries = 0;
 let UpdateObj;
 let editorInfo;
@@ -634,19 +638,43 @@ function initLocksmith() {
 
     WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith', 'https://www.waze.com/forum/viewtopic.php?f=819&t=285583');
 
-    LocksmithHighlightLayer = new OpenLayers.Layer.Vector('LocksmithHighlightLayer', { uniqueName: '_LocksmithHighlightLayer' });
     sdk.Map.addLayer({
         layerName: LocksmithHighlightLayer.name,
         zIndexing: true,
-        });
-    sdk.LayerSwitcher.addLayerCheckbox(LocksmithHighlightLayer);
-    sdk.Map.setLayerVisibility({
-        layerName: LocksmithHighlightLayer.name,
-        visibility: LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable,
+        styleRules: [
+            {
+                style: {
+                    strokeColor: '',
+                    strokeLinecap: 'round',
+                    strokeWidth: 18,
+                    fill: false,
+                    strokeOpacity: 0.5
+                }
+            },
+            {
+                predicate: (featureProperties) => featureProperties.Overlock,
+                style: {
+                    strokeColor: 'cyan'
+                }
+            },
+            {
+                predicate: (featureProperties) => !featureProperties.Overlock,
+                style: {
+                    strokeColor: 'red'
+                }
+            }
+        ]
     });
+    sdk.LayerSwitcher.addLayerCheckbox({name: LocksmithHighlightLayer.name, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
+    sdk.Events.on({ eventName: 'wme-layer-checkbox-toggled', eventHandler: toggleHighlights});
     console.log('LS: loaded');
 }
-
+    function toggleHighlights() {
+        const enableHighlight = document.getElementById('lsEnableHighlightSeg').checked;
+        if (!enableHighlight) {
+            removeHighlights()
+        }
+    }
 async function initializeSettings() {
     loadSpreadsheet();
     await loadSettings();
@@ -1311,7 +1339,7 @@ function onScreen(obj) {
 }
 
 function removeHighlights() {
-    LocksmithHighlightLayer.removeAllFeatures();
+    sdk.Map.removeAllFeaturesFromLayer( { layerName: LocksmithHighlightLayer.name })
 }
 
 function processLocks(seg, currLockRnk, stdLockRnk) {
@@ -1659,17 +1687,17 @@ function scanArea(manual) {
     function highlightSegments(errorType, segGeo) {
         const enableHighlight = document.getElementById('lsEnableHighlightSeg').checked;
         if (enableHighlight) {
-            const style = {
-                strokeColor: '',
-                strokeLinecap: 'round',
-                strokeWidth: 18,
-                fill: false,
-                strokeOpacity: 0.5
-            };
-            if (errorType === 'high') { style.strokeColor = 'cyan'; } else { style.strokeColor = 'red'; }
-            const geo = structuredClone(segGeo.geometry)
-            const feature = new OpenLayers.Feature.Vector(geo, {}, style);
-            LocksmithHighlightLayer.addFeatures([feature]);
+            const props = {}
+            if (errorType === 'high') { props.Overlock = true; }
+            sdk.Map.addFeatureToLayer({
+                layerName: LocksmithHighlightLayer.name,
+                feature: {
+                    id: `highlighted-${segGeo.id}`,
+                    type: 'Feature',
+                    geometry: segGeo.geometry,
+                    properties: props
+                }
+            })
         }
     }
 
