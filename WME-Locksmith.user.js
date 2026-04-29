@@ -86,7 +86,11 @@ let LsSettings = {};
 let _currentState = '';
 let cakeFlavor;
 let roadClear = false;
-let LocksmithHighlightLayer;
+let LocksmithHighlightLayer = {
+    name: '_LocksmithHighlightLayer',
+    highlightsVisible: false,
+    HighlightsEnable: false
+};
 let tries = 0;
 let UpdateObj;
 let editorInfo;
@@ -634,19 +638,43 @@ function initLocksmith() {
 
     WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith', 'https://www.waze.com/forum/viewtopic.php?f=819&t=285583');
 
-    LocksmithHighlightLayer = new OpenLayers.Layer.Vector('LocksmithHighlightLayer', { uniqueName: '_LocksmithHighlightLayer' });
     sdk.Map.addLayer({
         layerName: LocksmithHighlightLayer.name,
         zIndexing: true,
-        });
-        sdk.LayerSwitcher.addLayerCheckbox(LocksmithHighlightLayer);
-        sdk.Map.setLayerVisibility({
-            layerName: LocksmithHighlightLayer.name,
-            visibility: LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable,
-        });
+        styleRules: [
+            {
+                style: {
+                    strokeColor: '',
+                    strokeLinecap: 'round',
+                    strokeWidth: 18,
+                    fill: false,
+                    strokeOpacity: 0.5
+                }
+            },
+            {
+                predicate: (featureProperties) => featureProperties.Overlock,
+                style: {
+                    strokeColor: 'cyan'
+                }
+            },
+            {
+                predicate: (featureProperties) => !featureProperties.Overlock,
+                style: {
+                    strokeColor: 'red'
+                }
+            }
+        ]
+    });
+    sdk.LayerSwitcher.addLayerCheckbox({name: LocksmithHighlightLayer.name, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
+    sdk.Events.on({ eventName: 'wme-layer-checkbox-toggled', eventHandler: toggleHighlights});
     console.log('LS: loaded');
 }
-
+    function toggleHighlights() {
+        const enableHighlight = document.getElementById('lsEnableHighlightSeg').checked;
+        if (!enableHighlight) {
+            removeHighlights()
+        }
+    }
 async function initializeSettings() {
     loadSpreadsheet();
     await loadSettings();
@@ -916,15 +944,9 @@ function resetUISegStats() {
 }
 
 function WKT_to_LinearRing(wkt) {
-    const lines = wkt.split(',');
-    const ringPts = [];
 
-    for (let i = 0; i < lines.length; i++) {
-        const coords = lines[i].trim().match(/(-?\d*(?:\.\d*)?)\s(-?\d*(?:\.\d*))/);
-        const pt = WazeWrap.Geometry.ConvertTo900913(coords[1], coords[2]);
-        ringPts.push(new OpenLayers.Geometry.Point(pt.lon, pt.lat));
-    }
-    return new OpenLayers.Geometry.LinearRing(ringPts);
+    return W.userscripts.convertWktToGeoJSON(wkt)
+
 }
 
 async function loadSpreadsheet() {
@@ -974,7 +996,7 @@ async function loadSpreadsheet() {
                         else {
                             if (!_allStandardsArray[v[1]].States[v[2]].Areas) _allStandardsArray[v[1]].States[v[2]].Areas = {};
                             _allStandardsArray[v[1]].States[v[2]].Areas[v[3]] = JSON.parse(v[0]);
-                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = new OpenLayers.Geometry.Polygon(WKT_to_LinearRing(v[3]));
+                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = WKT_to_LinearRing(v[3]);
                         }
                     });
                     connectionEstablished = true;
@@ -1317,7 +1339,7 @@ function onScreen(obj) {
 }
 
 function removeHighlights() {
-    LocksmithHighlightLayer.removeAllFeatures();
+    sdk.Map.removeAllFeaturesFromLayer( { layerName: LocksmithHighlightLayer.name })
 }
 
 function processLocks(seg, currLockRnk, stdLockRnk) {
@@ -1461,7 +1483,7 @@ function processSegment(seg) {
                 } else { possiblePolys.push(v); }
             });
             for (let i = 0; i < possiblePolys.length; i++) {
-                if (possiblePolys[i].Polygon.intersects(seg.geometry)) {
+                if (turf.booleanIntersects(possiblePolys[i].Polygon,(seg.geometry))) {
                     tempLocks = possiblePolys[i];
                     break;
                 }
@@ -1665,17 +1687,17 @@ function scanArea(manual) {
     function highlightSegments(errorType, segGeo) {
         const enableHighlight = document.getElementById('lsEnableHighlightSeg').checked;
         if (enableHighlight) {
-            const style = {
-                strokeColor: '',
-                strokeLinecap: 'round',
-                strokeWidth: 18,
-                fill: false,
-                strokeOpacity: 0.5
-            };
-            if (errorType === 'high') { style.strokeColor = 'cyan'; } else { style.strokeColor = 'red'; }
-            const geo = structuredClone(segGeo.geometry)
-            const feature = new OpenLayers.Feature.Vector(geo, {}, style);
-            LocksmithHighlightLayer.addFeatures([feature]);
+            const props = {}
+            if (errorType === 'high') { props.Overlock = true; }
+            sdk.Map.addFeatureToLayer({
+                layerName: LocksmithHighlightLayer.name,
+                feature: {
+                    id: `highlighted-${segGeo.id}`,
+                    type: 'Feature',
+                    geometry: segGeo.geometry,
+                    properties: props
+                }
+            })
         }
     }
 
