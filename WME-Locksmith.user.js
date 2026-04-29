@@ -639,11 +639,11 @@ function initLocksmith() {
         layerName: LocksmithHighlightLayer.name,
         zIndexing: true,
         });
-        sdk.LayerSwitcher.addLayerCheckbox(LocksmithHighlightLayer);
-        sdk.Map.setLayerVisibility({
-            layerName: LocksmithHighlightLayer.name,
-            visibility: LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable,
-        });
+    sdk.LayerSwitcher.addLayerCheckbox(LocksmithHighlightLayer);
+    sdk.Map.setLayerVisibility({
+        layerName: LocksmithHighlightLayer.name,
+        visibility: LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable,
+    });
     console.log('LS: loaded');
 }
 
@@ -916,15 +916,9 @@ function resetUISegStats() {
 }
 
 function WKT_to_LinearRing(wkt) {
-    const lines = wkt.split(',');
-    const ringPts = [];
 
-    for (let i = 0; i < lines.length; i++) {
-        const coords = lines[i].trim().match(/(-?\d*(?:\.\d*)?)\s(-?\d*(?:\.\d*))/);
-        const pt = WazeWrap.Geometry.ConvertTo900913(coords[1], coords[2]);
-        ringPts.push(new OpenLayers.Geometry.Point(pt.lon, pt.lat));
-    }
-    return new OpenLayers.Geometry.LinearRing(ringPts);
+    return W.userscripts.convertWktToGeoJSON(wkt)
+
 }
 
 async function loadSpreadsheet() {
@@ -974,7 +968,7 @@ async function loadSpreadsheet() {
                         else {
                             if (!_allStandardsArray[v[1]].States[v[2]].Areas) _allStandardsArray[v[1]].States[v[2]].Areas = {};
                             _allStandardsArray[v[1]].States[v[2]].Areas[v[3]] = JSON.parse(v[0]);
-                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = new OpenLayers.Geometry.Polygon(WKT_to_LinearRing(v[3]));
+                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = WKT_to_LinearRing(v[3]);
                         }
                     });
                     connectionEstablished = true;
@@ -1461,7 +1455,7 @@ function processSegment(seg) {
                 } else { possiblePolys.push(v); }
             });
             for (let i = 0; i < possiblePolys.length; i++) {
-                if (possiblePolys[i].Polygon.intersects(seg.geometry)) {
+                if (turf.booleanIntersects(possiblePolys[i].Polygon,(seg.geometry))) {
                     tempLocks = possiblePolys[i];
                     break;
                 }
