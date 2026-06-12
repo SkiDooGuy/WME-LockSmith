@@ -30,7 +30,7 @@ const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - Converted to SDK<br><br>
 <b>FIXES:</b><br>
-- <br><br>`;
+- Fixed issue with latest updates.<br><br>`;
 const TRANSLATIONS = {
     default: {
         scriptTitle: 'Locksmith',
@@ -665,7 +665,7 @@ function initLocksmith() {
             }
         ]
     });
-    sdk.LayerSwitcher.addLayerCheckbox({name: LocksmithHighlightLayer.name, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
+    sdk.LayerSwitcher.addLayerCheckbox({name: TRANSLATIONS[langLocality].scriptTitle, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
     sdk.Events.on({ eventName: 'wme-layer-checkbox-toggled', eventHandler: toggleHighlights});
     console.log('LS: loaded');
 }
@@ -1143,7 +1143,8 @@ function getstatesAvailable() {
             for( var i = 0; i < allstates.length; i++){
                 if (!allstates[i]) continue;
                 try {
-                    var test = _allStandardsArray[sdk.DataModel.Countries.getById({ countryId: allstates[i].countryID })?.name || sdk.DataModel.Countries.getTopCountry().name].States[allstates[i].name];
+                    const countryId = allstates[i].countryID ? allstates[i].countryID : sdk.DataModel.Countries.getTopCountry().id;
+                    var test = _allStandardsArray[sdk.DataModel.Countries.getById({ countryId: countryId })?.name || sdk.DataModel.Countries.getTopCountry().name].States[allstates[i].name];
                     filtered.push(allstates[i])
                 }
                 catch {
