@@ -10,7 +10,7 @@
 // @match        https://beta.waze.com/*/editor*
 // @exclude      https://www.waze.com/user/editor*
 // @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @require          https://cdn.jsdelivr.net/npm/@turf/turf@7.3.1/turf.min.js
+// @require      https://cdn.jsdelivr.net/npm/@turf/turf@7.3.1/turf.min.js
 // @require      https://apis.google.com/js/api.js
 // @grant        unsafeWindow
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
