@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.04.20.001
+// @version      2026.08.04.00
 // @description  Dynamic locking tool which locks based on State standards
-// @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle
+// @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle / jm6087
 // @match        https://www.waze.com/editor*
 // @match        https://www.waze.com/*/editor*
 // @match        https://beta.waze.com/editor*
@@ -30,7 +30,7 @@ const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - Converted to SDK<br><br>
 <b>FIXES:</b><br>
-- <br><br>`;
+- Fixed issue for no-state countries unable to access default state standards<br><br>`;
 const TRANSLATIONS = {
     default: {
         scriptTitle: 'Locksmith',
@@ -86,7 +86,11 @@ let LsSettings = {};
 let _currentState = '';
 let cakeFlavor;
 let roadClear = false;
-let LocksmithHighlightLayer;
+let LocksmithHighlightLayer = {
+    name: '_LocksmithHighlightLayer',
+    highlightsVisible: false,
+    HighlightsEnable: false
+};
 let tries = 0;
 let UpdateObj;
 let editorInfo;
@@ -634,19 +638,43 @@ function initLocksmith() {
 
     WazeWrap.Interface.ShowScriptUpdate(GM_info.script.name, GM_info.script.version, LS_UPDATE_NOTES, 'https://greasyfork.org/en/scripts/386773-wme-locksmith', 'https://www.waze.com/forum/viewtopic.php?f=819&t=285583');
 
-    LocksmithHighlightLayer = new OpenLayers.Layer.Vector('LocksmithHighlightLayer', { uniqueName: '_LocksmithHighlightLayer' });
     sdk.Map.addLayer({
         layerName: LocksmithHighlightLayer.name,
         zIndexing: true,
-        });
-        sdk.LayerSwitcher.addLayerCheckbox(LocksmithHighlightLayer);
-        sdk.Map.setLayerVisibility({
-            layerName: LocksmithHighlightLayer.name,
-            visibility: LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable,
-        });
+        styleRules: [
+            {
+                style: {
+                    strokeColor: '',
+                    strokeLinecap: 'round',
+                    strokeWidth: 18,
+                    fill: false,
+                    strokeOpacity: 0.5
+                }
+            },
+            {
+                predicate: (featureProperties) => featureProperties.Overlock,
+                style: {
+                    strokeColor: 'cyan'
+                }
+            },
+            {
+                predicate: (featureProperties) => !featureProperties.Overlock,
+                style: {
+                    strokeColor: 'red'
+                }
+            }
+        ]
+    });
+    sdk.LayerSwitcher.addLayerCheckbox({name: TRANSLATIONS[langLocality].scriptTitle, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
+    sdk.Events.on({ eventName: 'wme-layer-checkbox-toggled', eventHandler: toggleHighlights});
     console.log('LS: loaded');
 }
-
+    function toggleHighlights() {
+        const enableHighlight = document.getElementById('lsEnableHighlightSeg').checked;
+        if (!enableHighlight) {
+            removeHighlights()
+        }
+    }
 async function initializeSettings() {
     loadSpreadsheet();
     await loadSettings();
@@ -815,17 +843,17 @@ async function saveSettings() {
 
     if (localStorage) { localStorage.setItem('LsUS_Settings', JSON.stringify(localsettings)); }
     // Attempt to connect to the WazeWrap setting store server
-    // const serverSave = await WazeWrap.Remote.SaveSettings('LsUS_Settings', localsettings);
+//    const serverSave = await WazeWrap.Remote.SaveSettings('LsUS_Settings', localsettings);
 
-    // if (serverSave === null) console.log('LS: User PIN not set in WazeWrap tab');
-    // else if (serverSave === false) console.log('LS: Unable to save settings to server');
+//    if (serverSave === null) console.log('LS: User PIN not set in WazeWrap tab');
+//    else if (serverSave === false) console.log('LS: Unable to save settings to server');
 }
 
 async function loadSettings() {
     const localSettings = $.parseJSON(localStorage.getItem('LsUS_Settings'));
     // Attempt connection to WazeWrap setting server to retrieve settings
-    // const serverSettings = await WazeWrap.Remote.RetrieveSettings('LsUS_Settings');
-    // if (!serverSettings) console.log('LS: Error communicating with WW settings server');
+// wazewrap removed    const serverSettings = await WazeWrap.Remote.RetrieveSettings('LsUS_Settings');
+//    if (!serverSettings) console.log('LS: Error communicating with WW settings server');
     // Default checkbox settings
     const defaultsettings = {
         lastSaveAction: null,
@@ -852,10 +880,10 @@ async function loadSettings() {
     };
 
     LsSettings = $.extend({}, defaultsettings, localSettings);
-    // if (serverSettings && serverSettings.lastSaveAction > LsSettings.lastSaveAction) {
-    //     $.extend(LsSettings, serverSettings);
-    //     console.log('LS: server settings used');
-    // }
+//     if (serverSettings && serverSettings.lastSaveAction > LsSettings.lastSaveAction) {
+//         $.extend(LsSettings, serverSettings);
+//         console.log('LS: server settings used');
+//     }
     if (LsSettings.EnableSaveSettings === false) LsSettings = defaultsettings;
     // Sets saved values for segment locks when desired
     if (LsSettings.EnableSaveValues === true) {
@@ -916,15 +944,9 @@ function resetUISegStats() {
 }
 
 function WKT_to_LinearRing(wkt) {
-    const lines = wkt.split(',');
-    const ringPts = [];
 
-    for (let i = 0; i < lines.length; i++) {
-        const coords = lines[i].trim().match(/(-?\d*(?:\.\d*)?)\s(-?\d*(?:\.\d*))/);
-        const pt = WazeWrap.Geometry.ConvertTo900913(coords[1], coords[2]);
-        ringPts.push(new OpenLayers.Geometry.Point(pt.lon, pt.lat));
-    }
-    return new OpenLayers.Geometry.LinearRing(ringPts);
+    return W.userscripts.convertWktToGeoJSON(wkt)
+
 }
 
 async function loadSpreadsheet() {
@@ -974,7 +996,7 @@ async function loadSpreadsheet() {
                         else {
                             if (!_allStandardsArray[v[1]].States[v[2]].Areas) _allStandardsArray[v[1]].States[v[2]].Areas = {};
                             _allStandardsArray[v[1]].States[v[2]].Areas[v[3]] = JSON.parse(v[0]);
-                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = new OpenLayers.Geometry.Polygon(WKT_to_LinearRing(v[3]));
+                            if (v[3].startsWith('POLYGON')) _allStandardsArray[v[1]].States[v[2]].Areas[v[3]].Polygon = WKT_to_LinearRing(v[3]);
                         }
                     });
                     connectionEstablished = true;
@@ -1112,32 +1134,46 @@ function setUIText() {
     $('#ls-Add-Att-Info').attr('data-original-title', strings.attrTooltip);
 }
 
+// Returns true when the top country defines a country-wide "default" state standard
+function topCountryHasDefaultState() {
+    const topCountry = sdk.DataModel.Countries.getTopCountry();
+    return !!(topCountry && _allStandardsArray[topCountry.name] && _allStandardsArray[topCountry.name].States && _allStandardsArray[topCountry.name].States.default);
+}
+
 function getstatesAvailable() {
-    const allstates = sdk.DataModel.States.getAll()
-    const filtered = []
+    const allstates = sdk.DataModel.States.getAll();
+    const filtered = [];
 
     if (allstates) {
-        if (allstates.length > 1) {
-            for( var i = 0; i < allstates.length; i++){
-                if (!allstates[i]) continue;
-                try {
-                    var test = _allStandardsArray[sdk.DataModel.Countries.getById({ countryId: allstates[i].countryID })?.name || sdk.DataModel.Countries.getTopCountry().name].States[allstates[i].name];
-                    filtered.push(allstates[i])
-                }
-                catch {
-                    //    console.log('skipping: ' + allstates[i].name);
-                }
+        const topCountry = sdk.DataModel.Countries.getTopCountry();
+        const topCountryName = topCountry ? topCountry.name : null;
+        const topCountryId = topCountry ? topCountry.id : null;
+        const hasDefault = topCountryHasDefaultState();
+
+        for (let i = 0; i < allstates.length; i++) {
+            const state = allstates[i];
+            if (!state) continue;
+            // Ignore states belonging to other countries so they can't interfere
+            if (topCountryId != null && state.countryID != null && state.countryID !== 0 && state.countryID !== topCountryId) continue;
+
+            const stateName = state.name === '' ? 'default' : state.name;
+            if (topCountryName && _allStandardsArray[topCountryName]?.States?.[stateName]) {
+                filtered.push(state);
             }
-        } else {
-            filtered.push(allstates[0])
+        }
+
+        // No named state of the top country has standards, but it defines a
+        // country-wide default - fall back to that default instead of erroring
+        if (filtered.length === 0 && hasDefault) {
+            filtered.push({ name: '', countryID: topCountryId });
         }
     }
     return filtered;
 }
 
 function getCurrentState() {
-    const overrideEnable = getId('lsManualStateOverride').checked;
-    const disablePopup = getId('lsDisableStatePopup').checked;
+    const overrideEnable = document.getElementById('lsManualStateOverride').checked;
+    const disablePopup = document.getElementById('lsDisableStatePopup').checked;
     let statusOk = false;
     let attempts = 0;
 
@@ -1178,7 +1214,7 @@ function checkCountry() {
 }
 
 function generateStateList() {
-    const stateSelector = getId('ls-State-Selection');
+    const stateSelector = document.getElementById('ls-State-Selection');
     const currOptionsLength = stateSelector.childNodes.length;
     const statesAvailable = getstatesAvailable();
 
@@ -1191,7 +1227,7 @@ function generateStateList() {
 
     // Adds available states to the user select
     for (let i = 0; i < statesAvailable.length; i++) {
-        const currStateName = statesAvailable[i].name;
+        const currStateName = statesAvailable[i].name === '' ? 'default' : statesAvailable[i].name;
         const newStateOption = document.createElement('option');
         const stateNameText = document.createTextNode(currStateName);
         if (i === 0) {
@@ -1209,24 +1245,17 @@ function setCurrentStandards(stateName) {
     let countryName;
     // Sets the locking standards based on the state and updates relevent UI components
     function applyStandards() {
-       if (sdk.DataModel.States.getAll().length > 0) {
-            sdk.DataModel.States.getAll().forEach(s => {
-                const modelName = s.name === '' ? 'default' : s.name;
-                if (modelName === stateName) {
-
-// NEED TO FIX ONCE YOU CAN GET A COUNTRY ID FROM THE STATE MODEL
-                    countryName = s.countryID === 0 ? sdk.DataModel.Countries.getTopCountry().name : sdk.DataModel.Countries.getById({ countryId: sdk.DataModel.Cities.getAll()[0].countryId}).name;
-                    if (countryName !== null) {
-                        proceed = true;
-                        _currentStateStandards = _allStandardsArray[countryName].States[stateName];
-                        // console.log(_currentStateStandards);
-                    }
-                }
-            });
+        // Standards always come from the top country; the state name selects
+        // either a named state or the country-wide "default" standard
+        const topCountry = sdk.DataModel.Countries.getTopCountry();
+        countryName = topCountry ? topCountry.name : null;
+        if (countryName) {
+            proceed = true;
+            _currentStateStandards = _allStandardsArray[countryName]?.States?.[stateName];
         }
 
         if (_currentStateStandards && _currentStateStandards.LS && proceed) {
-            if (!getId('lsEnableSaveValues').checked) {
+            if (!document.getElementById('lsEnableSaveValues').checked) {
                 $('#lsLockStreetSelect').val(_currentStateStandards.LS);
                 $('#lsLockPSSelect').val(_currentStateStandards.PS);
                 $('#lsLockMinHSelect').val(_currentStateStandards.mH);
@@ -1315,7 +1344,7 @@ function onScreen(obj) {
 }
 
 function removeHighlights() {
-    LocksmithHighlightLayer.removeAllFeatures();
+    sdk.Map.removeAllFeaturesFromLayer( { layerName: LocksmithHighlightLayer.name })
 }
 
 function processLocks(seg, currLockRnk, stdLockRnk) {
@@ -1413,24 +1442,24 @@ function processSegment(seg) {
     let possiblePolys = [];
 
     // Gather primary segment locks from UI in case of user override of standards
-    tempLocks.LS = getId('lsLockStreetSelect').value;
-    tempLocks.PS = getId('lsLockPSSelect').value;
-    tempLocks.mH = getId('lsLockMinHSelect').value;
-    tempLocks.MH = getId('lsLockMajHSelect').value;
-    tempLocks.Ramp = getId('lsLockRmpSelect').value;
-    tempLocks.Fwy = getId('lsLockFwySelect').value;
-    tempLocks.Private = getId('lsLockPvtSelect').value;
-    tempLocks.PLR = getId('lsLockPlrSelect').value;
-    tempLocks.Railroad = getId('lsLockRailSelect').value;
-    tempLocks.Ferry = getId('lsLockFrySelect').value;
-    tempLocks.Offroad = getId('lsLockOfrdSelect').value;
-    tempLocks.Runway = getId('lsLockRnwySelect').value;
-    tempLocks.NonRoutablePedestrian = getId('lsLockNonpedSelect').value;
-    const unpavedChkd = getId('ls-Unpaved-Enable').checked;
-    const oneWayChkd = getId('ls-OneWay-Enable').checked;
-    const tollChkd = getId('ls-Toll-Enable').checked;
-    const wktChkd = getId('ls-WKT-Enable').checked;
-    // const hovChkd = getId('ls-HOV-Enable').checked;
+    tempLocks.LS = document.getElementById('lsLockStreetSelect').value;
+    tempLocks.PS = document.getElementById('lsLockPSSelect').value;
+    tempLocks.mH = document.getElementById('lsLockMinHSelect').value;
+    tempLocks.MH = document.getElementById('lsLockMajHSelect').value;
+    tempLocks.Ramp = document.getElementById('lsLockRmpSelect').value;
+    tempLocks.Fwy = document.getElementById('lsLockFwySelect').value;
+    tempLocks.Private = document.getElementById('lsLockPvtSelect').value;
+    tempLocks.PLR = document.getElementById('lsLockPlrSelect').value;
+    tempLocks.Railroad = document.getElementById('lsLockRailSelect').value;
+    tempLocks.Ferry = document.getElementById('lsLockFrySelect').value;
+    tempLocks.Offroad = document.getElementById('lsLockOfrdSelect').value;
+    tempLocks.Runway = document.getElementById('lsLockRnwySelect').value;
+    tempLocks.NonRoutablePedestrian = document.getElementById('lsLockNonpedSelect').value;
+    const unpavedChkd = document.getElementById('ls-Unpaved-Enable').checked;
+    const oneWayChkd = document.getElementById('ls-OneWay-Enable').checked;
+    const tollChkd = document.getElementById('ls-Toll-Enable').checked;
+    const wktChkd = document.getElementById('ls-WKT-Enable').checked;
+    // const hovChkd = document.getElementById('ls-HOV-Enable').checked;
 
     let segStatus = seg.state == null ? 'good' : seg.state;
     if (segStatus.toLowerCase() !== 'insert' && segStatus.toLowerCase() !== 'delete') {
@@ -1459,7 +1488,7 @@ function processSegment(seg) {
                 } else { possiblePolys.push(v); }
             });
             for (let i = 0; i < possiblePolys.length; i++) {
-                if (possiblePolys[i].Polygon.intersects(seg.geometry)) {
+                if (turf.booleanIntersects(possiblePolys[i].Polygon,(seg.geometry))) {
                     tempLocks = possiblePolys[i];
                     break;
                 }
@@ -1622,7 +1651,7 @@ function processSegment(seg) {
 
 function relockAll() {
     let count = 0;
-    const resetHigher = getId('lsEnableResetHigher').checked;
+    const resetHigher = document.getElementById('lsEnableResetHigher').checked;
     if (getCurrentState()) {
         _.each(sdk.DataModel.Segments.getAll(), v => {
             const segAtt = v;
@@ -1647,7 +1676,7 @@ function relockAll() {
 
 function tryScan() {
 //  I believe that this is no longer needed since HN mode is deprecated.   NEEDs TO BE CONVERTED SDK MAYBE
-    if (!W.editingMediator.attributes.editingHouseNumbers && getId('lsEnableActiveScan').checked) scanArea(false);
+    if (document.getElementById('lsEnableActiveScan').checked) scanArea(false);
 }
 
 function scanArea(manual) {
@@ -1661,19 +1690,19 @@ function scanArea(manual) {
     }
 
     function highlightSegments(errorType, segGeo) {
-        const enableHighlight = getId('lsEnableHighlightSeg').checked;
+        const enableHighlight = document.getElementById('lsEnableHighlightSeg').checked;
         if (enableHighlight) {
-            const style = {
-                strokeColor: '',
-                strokeLinecap: 'round',
-                strokeWidth: 18,
-                fill: false,
-                strokeOpacity: 0.5
-            };
-            if (errorType === 'high') { style.strokeColor = 'cyan'; } else { style.strokeColor = 'red'; }
-            const geo = structuredClone(segGeo.geometry)
-            const feature = new OpenLayers.Feature.Vector(geo, {}, style);
-            LocksmithHighlightLayer.addFeatures([feature]);
+            const props = {}
+            if (errorType === 'high') { props.Overlock = true; }
+            sdk.Map.addFeatureToLayer({
+                layerName: LocksmithHighlightLayer.name,
+                feature: {
+                    id: `highlighted-${segGeo.id}`,
+                    type: 'Feature',
+                    geometry: segGeo.geometry,
+                    properties: props
+                }
+            })
         }
     }
 
@@ -1697,12 +1726,13 @@ function scanArea(manual) {
         };
         let incorrectLocks = false;
         let numWrongLocks = 0;
-        const resetHigher = getId('lsEnableResetHigher').checked;
-        const ignoreHigher = getId('lsEnableIgnoreRank').checked;
+        const resetHigher = document.getElementById('lsEnableResetHigher').checked;
+        const ignoreHigher = document.getElementById('lsEnableIgnoreRank').checked;
 
         // Count how many segments need a corrected lock (limit to 150 to save CPU), accounts for the users editor level
         _.each(sdk.DataModel.Segments.getAll(), v => {
             if (numWrongLocks < 150 && onScreen(v)) {
+                if (v.primaryStreetId === null) { return; }
                 const correctLockRank = processSegment(v);
 
                 if (correctLockRank !== false) {
