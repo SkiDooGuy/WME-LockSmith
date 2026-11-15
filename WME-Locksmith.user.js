@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Locksmith
 // @namespace    https://greasyfork.org/en/users/286957-skidooguy
-// @version      2026.04.29.00
+// @version      2026.08.04.00
 // @description  Dynamic locking tool which locks based on State standards
 // @author       SkiDooGuy / JustinS83 / Blaine "herrchin" Kahle / jm6087
 // @match        https://www.waze.com/editor*
@@ -30,7 +30,7 @@ const FEATURELOCK = 2;
 const LS_UPDATE_NOTES = `<b>NEW:</b><br>
 - Converted to SDK<br><br>
 <b>FIXES:</b><br>
-- <br><br>`;
+- Fixed issue for no-state countries unable to access default state standards<br><br>`;
 const TRANSLATIONS = {
     default: {
         scriptTitle: 'Locksmith',
@@ -665,7 +665,7 @@ function initLocksmith() {
             }
         ]
     });
-    sdk.LayerSwitcher.addLayerCheckbox({name: LocksmithHighlightLayer.name, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
+    sdk.LayerSwitcher.addLayerCheckbox({name: TRANSLATIONS[langLocality].scriptTitle, isChecked: (LocksmithHighlightLayer.highlightsVisible && LocksmithHighlightLayer.HighlightsEnable)});
     sdk.Events.on({ eventName: 'wme-layer-checkbox-toggled', eventHandler: toggleHighlights});
     console.log('LS: loaded');
 }
@@ -1134,24 +1134,38 @@ function setUIText() {
     $('#ls-Add-Att-Info').attr('data-original-title', strings.attrTooltip);
 }
 
+// Returns true when the top country defines a country-wide "default" state standard
+function topCountryHasDefaultState() {
+    const topCountry = sdk.DataModel.Countries.getTopCountry();
+    return !!(topCountry && _allStandardsArray[topCountry.name] && _allStandardsArray[topCountry.name].States && _allStandardsArray[topCountry.name].States.default);
+}
+
 function getstatesAvailable() {
-    const allstates = sdk.DataModel.States.getAll()
-    const filtered = []
+    const allstates = sdk.DataModel.States.getAll();
+    const filtered = [];
 
     if (allstates) {
-        if (allstates.length > 1) {
-            for( var i = 0; i < allstates.length; i++){
-                if (!allstates[i]) continue;
-                try {
-                    var test = _allStandardsArray[sdk.DataModel.Countries.getById({ countryId: allstates[i].countryID })?.name || sdk.DataModel.Countries.getTopCountry().name].States[allstates[i].name];
-                    filtered.push(allstates[i])
-                }
-                catch {
-                    //    console.log('skipping: ' + allstates[i].name);
-                }
+        const topCountry = sdk.DataModel.Countries.getTopCountry();
+        const topCountryName = topCountry ? topCountry.name : null;
+        const topCountryId = topCountry ? topCountry.id : null;
+        const hasDefault = topCountryHasDefaultState();
+
+        for (let i = 0; i < allstates.length; i++) {
+            const state = allstates[i];
+            if (!state) continue;
+            // Ignore states belonging to other countries so they can't interfere
+            if (topCountryId != null && state.countryID != null && state.countryID !== 0 && state.countryID !== topCountryId) continue;
+
+            const stateName = state.name === '' ? 'default' : state.name;
+            if (topCountryName && _allStandardsArray[topCountryName]?.States?.[stateName]) {
+                filtered.push(state);
             }
-        } else {
-            filtered.push(allstates[0])
+        }
+
+        // No named state of the top country has standards, but it defines a
+        // country-wide default - fall back to that default instead of erroring
+        if (filtered.length === 0 && hasDefault) {
+            filtered.push({ name: '', countryID: topCountryId });
         }
     }
     return filtered;
@@ -1213,7 +1227,7 @@ function generateStateList() {
 
     // Adds available states to the user select
     for (let i = 0; i < statesAvailable.length; i++) {
-        const currStateName = statesAvailable[i].name;
+        const currStateName = statesAvailable[i].name === '' ? 'default' : statesAvailable[i].name;
         const newStateOption = document.createElement('option');
         const stateNameText = document.createTextNode(currStateName);
         if (i === 0) {
@@ -1231,22 +1245,13 @@ function setCurrentStandards(stateName) {
     let countryName;
     // Sets the locking standards based on the state and updates relevent UI components
     function applyStandards() {
-       if (sdk.DataModel.States.getAll().length > 0) {
-            sdk.DataModel.States.getAll().forEach(s => {
-                const modelName = s.name === '' ? 'default' : s.name;
-                if (modelName === stateName) {
-
-// NEED TO FIX ONCE YOU CAN GET A COUNTRY ID FROM THE STATE MODEL
-                    countryName = s.countryID === 0 ? sdk.DataModel.Countries.getTopCountry().name : sdk.DataModel.Countries.getById({ countryId: sdk.DataModel.Cities.getAll()[0].countryId}).name;
-                    if (countryName !== null) {
-                        proceed = true;
-                        console.log("LOCKSMITH")
-                        console.log(_allStandardsArray[countryName])
-                        _currentStateStandards = _allStandardsArray[countryName].States[stateName];
-                        // console.log(_currentStateStandards);
-                    }
-                }
-            });
+        // Standards always come from the top country; the state name selects
+        // either a named state or the country-wide "default" standard
+        const topCountry = sdk.DataModel.Countries.getTopCountry();
+        countryName = topCountry ? topCountry.name : null;
+        if (countryName) {
+            proceed = true;
+            _currentStateStandards = _allStandardsArray[countryName]?.States?.[stateName];
         }
 
         if (_currentStateStandards && _currentStateStandards.LS && proceed) {
@@ -1727,6 +1732,7 @@ function scanArea(manual) {
         // Count how many segments need a corrected lock (limit to 150 to save CPU), accounts for the users editor level
         _.each(sdk.DataModel.Segments.getAll(), v => {
             if (numWrongLocks < 150 && onScreen(v)) {
+                if (v.primaryStreetId === null) { return; }
                 const correctLockRank = processSegment(v);
 
                 if (correctLockRank !== false) {
